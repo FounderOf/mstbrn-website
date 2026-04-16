@@ -5,12 +5,12 @@
 // =============================================
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAuZLwwomxlNUjcPp4JYILdSz4EAWtoRxY",
+  authDomain: "dooniniks-paradise.firebaseapp.com",
+  projectId: "dooniniks-paradise",
+  storageBucket: "dooniniks-paradise.firebasestorage.app",
+  messagingSenderId: "140802324914",
+  appId: "1:140802324914:web:17ea9b675e8770ba40ccab"
 };
 
 // Initialize Firebase
