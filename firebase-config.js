@@ -1,7 +1,7 @@
 // =============================================
-//   FIREBASE CONFIG — MSTBRN COMMUNITY
-//   Replace the values below with your own
-//   Firebase project credentials!
+//   FIREBASE CONFIG — MSTBRN COMMUNITY v2
+//   Ganti nilai di bawah ini dengan kredensial
+//   Firebase project kamu!
 // =============================================
 
 const firebaseConfig = {
@@ -21,4 +21,4 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
-console.log("✅ Firebase initialized — MSTBRN Community");
+console.log("✅ Firebase berhasil diinisialisasi — MSTBRN Community v2");
