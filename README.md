@@ -1,29 +1,41 @@
-# 🚀 MSTBRN Community — Firebase Setup Guide
+# 🚀 MSTBRN Community v2 — Panduan Setup Firebase
 
-## Step 1: Create Firebase Project
+## Struktur File
 
-1. Go to **https://console.firebase.google.com**
-2. Click **"Add project"**
-3. Name it: `mstbrn-community`
-4. Disable Google Analytics (optional)
-5. Click **"Create project"**
+```
+mstbrn2/
+├── index.html          ← Aplikasi utama (semua halaman)
+├── style.css           ← Semua styling
+├── app.js              ← Semua logika & fitur
+├── firebase-config.js  ← Isi dengan kredensial Firebase kamu
+├── logo.png            ← Logo MSTBRN Community
+└── PANDUAN.md          ← File ini
+```
 
 ---
 
-## Step 2: Add a Web App
+## Langkah 1: Buat Firebase Project
 
-1. In your Firebase project dashboard, click the **Web icon** (`</>`)
-2. Register app name: `MSTBRN Community`
-3. Copy the `firebaseConfig` object shown
-4. Open `firebase-config.js` in the project folder
-5. Replace the placeholder values with your real config:
+1. Buka **https://console.firebase.google.com**
+2. Klik **"Add project"**
+3. Nama project: `mstbrn-community`
+4. Klik **"Create project"**
+
+---
+
+## Langkah 2: Daftarkan Web App
+
+1. Di dashboard Firebase, klik ikon **Web (`</>`)**
+2. Nama app: `MSTBRN Community`
+3. Salin `firebaseConfig` yang muncul
+4. Buka file `firebase-config.js` dan ganti nilai-nilainya:
 
 ```js
 const firebaseConfig = {
   apiKey: "AIza...",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
+  authDomain: "mstbrn-community.firebaseapp.com",
+  projectId: "mstbrn-community",
+  storageBucket: "mstbrn-community.appspot.com",
   messagingSenderId: "1234567890",
   appId: "1:1234...:web:abc123"
 };
@@ -31,38 +43,35 @@ const firebaseConfig = {
 
 ---
 
-## Step 3: Enable Authentication
+## Langkah 3: Aktifkan Authentication
 
-1. In Firebase Console → **Authentication** → **Get Started**
-2. Click **Sign-in method** tab
-3. Enable **Email/Password**
-4. Click **Save**
+1. Firebase Console → **Authentication** → **Get Started**
+2. Tab **Sign-in method** → Aktifkan **Email/Password**
+3. Klik **Save**
 
 ---
 
-## Step 4: Create Firestore Database
+## Langkah 4: Buat Firestore Database
 
 1. Firebase Console → **Firestore Database** → **Create database**
-2. Start in **production mode**
-3. Choose a location (e.g. `us-central`)
-4. Click **Done**
+2. Pilih **production mode**
+3. Pilih lokasi server (contoh: `asia-southeast1` untuk Asia Tenggara)
+4. Klik **Done**
 
-### Firestore Security Rules
-
-Paste these rules in **Firestore → Rules**:
+### Rules Firestore (Paste di Firestore → Rules):
 
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users: read by anyone logged in, write only own doc
+    // Users
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Posts: read by anyone logged in
+    // Posts
     match /posts/{postId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null;
@@ -72,15 +81,11 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
 
-      // Likes sub-collection
       match /likes/{likeId} {
         allow read, write: if request.auth != null;
       }
-
-      // Comments sub-collection
       match /comments/{commentId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null;
+        allow read, create: if request.auth != null;
         allow delete: if request.auth != null && (
           request.auth.uid == resource.data.authorId ||
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
@@ -88,10 +93,10 @@ service cloud.firestore {
       }
     }
 
-    // Meta stats
-    match /meta/{doc} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    // Admin Chat — hanya admin yang bisa akses
+    match /adminChat/{msgId} {
+      allow read, write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }
@@ -99,15 +104,12 @@ service cloud.firestore {
 
 ---
 
-## Step 5: Enable Firebase Storage
+## Langkah 5: Aktifkan Storage
 
 1. Firebase Console → **Storage** → **Get Started**
-2. Start in **production mode**
-3. Click **Done**
+2. Pilih **production mode** → Done
 
-### Storage Security Rules
-
-Paste in **Storage → Rules**:
+### Rules Storage (Paste di Storage → Rules):
 
 ```
 rules_version = '2';
@@ -127,19 +129,62 @@ service firebase.storage {
 
 ---
 
-## Step 6: Make Yourself Admin
+## Langkah 6: Jadikan Diri Sendiri Admin
 
-After registering on the site, go to **Firestore → users** collection, find your user document, and change:
-
-```json
-"role": "user"   →   "role": "admin"
-```
-
-Refresh the site. The Admin panel will appear in the sidebar.
+1. Daftar akun di website
+2. Buka Firebase Console → Firestore → Collection `users`
+3. Temukan dokumen dengan UID kamu
+4. Ubah field: `"role": "user"` → `"role": "admin"`
+5. Refresh website — panel Admin akan muncul di sidebar
 
 ---
 
-## Firestore Database Structure
+## Langkah 7: Ubah Password Admin Rahasia
+
+Di file `app.js`, baris paling atas:
+
+```js
+const ADMIN_SECRET_PASSWORD = "mstbrn_admin_2025"; // Ganti ini!
+```
+
+Ganti dengan password rahasia yang kuat dan simpan baik-baik.
+
+---
+
+## Cara Akses Panel Admin (Tombol Rahasia)
+
+1. Buka halaman login
+2. **Klik logo MSTBRN sebanyak 5 kali** (muncul hint "4 lagi...", "3 lagi...", dst)
+3. Form password rahasia akan muncul
+4. Masukkan password admin rahasia
+5. Setelah berhasil, login dengan akun admin
+
+---
+
+## Kustomisasi
+
+### Nama Tim / Pendiri (index.html)
+Cari bagian `.team-grid` dan ubah:
+- `NamaFounder` → nama founder sebenarnya
+- `NamaDeveloper` → nama developer sebenarnya
+- `NamaAdmin` → nama admin sebenarnya
+- `NamaStaff` → nama staff sebenarnya
+
+### Link Discord (index.html)
+Ganti semua `https://discord.gg/GANTI_LINK_DISCORD` dengan link Discord kamu.
+
+### Link Roblox Maps (index.html)
+Ganti:
+- `GANTI_ID_MAP_1` → ID game Roblox map 1
+- `GANTI_ID_MAP_2` → ID game Roblox map 2
+- `GANTI_ID_MAP_3` → ID game Roblox map 3
+
+### Link TikTok (index.html)
+Ganti `@GANTI_USERNAME_TIKTOK` dengan username TikTok kamu.
+
+---
+
+## Struktur Firestore Database
 
 ```
 firestore/
@@ -157,76 +202,43 @@ firestore/
 │   └── {postId}/
 │       ├── caption: string
 │       ├── imageURL: string
-│       ├── authorId: string (uid)
+│       ├── authorId: string
 │       ├── username: string
 │       ├── photoURL: string
 │       ├── likeCount: number
 │       ├── commentCount: number
 │       ├── createdAt: timestamp
 │       ├── likes/
-│       │   └── {uid}/
-│       │       └── likedAt: timestamp
+│       │   └── {uid}/ → { likedAt }
 │       └── comments/
-│           └── {commentId}/
-│               ├── text: string
-│               ├── authorId: string
-│               ├── username: string
-│               ├── photoURL: string
-│               └── createdAt: timestamp
+│           └── {id}/ → { text, authorId, username, photoURL, createdAt }
 │
-└── meta/
-    └── stats/
-        ├── memberCount: number
-        └── postCount: number
+└── adminChat/
+    └── {msgId}/
+        ├── text: string
+        ├── authorId: string
+        ├── username: string
+        ├── photoURL: string
+        └── createdAt: timestamp
 ```
 
 ---
 
-## Step 7: Launch the Site
+## Deploy (Gratis)
 
-Option A — **Local testing** (recommended):
-- Install VS Code + Live Server extension
-- Right-click `index.html` → **Open with Live Server**
-
-Option B — **Firebase Hosting** (free deployment):
+### Firebase Hosting:
 ```bash
 npm install -g firebase-tools
 firebase login
 firebase init hosting
-# Set public directory to: . (current folder)
-# Single-page app: No
+# Public directory: . (titik)
+# Single page app: No
 firebase deploy
 ```
 
-Option C — **Netlify** (drag & drop):
-- Go to https://netlify.com
-- Drag the project folder onto the dashboard
-- Done! Your site is live.
+### Netlify (Drag & Drop):
+Buka https://netlify.com → drag folder `mstbrn2` ke dashboard → selesai!
 
 ---
 
-## File Structure
-
-```
-mstbrn/
-├── index.html          ← Main app (all pages)
-├── style.css           ← All styles
-├── app.js              ← All logic
-├── firebase-config.js  ← Your Firebase credentials
-├── logo-dark.svg       ← Logo (dark background)
-├── logo-light.svg      ← Logo (light background)
-└── SETUP.md            ← This guide
-```
-
----
-
-## Customization
-
-- **Social links** — Edit the URLs in the Links section of `index.html`
-- **Roblox maps** — Update game IDs/links in the Roblox section
-- **Discord** — Replace `https://discord.gg/mstbrn` with your actual invite
-- **Colors** — Change CSS variables in `style.css` under `:root`
-
----
-
-Happy building! 🚀 — MSTBRN Community
+Selamat! 🎉 MSTBRN Community siap digunakan.
