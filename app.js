@@ -5,7 +5,7 @@
 // =============================================
 
 // ─── CONFIG ───────────────────────────────────
-const ADMIN_SECRET_PASSWORD = "mstbrn_admin_2025"; // Ganti dengan password rahasia Anda
+const ADMIN_SECRET_PASSWORD = "mstbrn1209"; // Ganti dengan password rahasia Anda
 const LOGO_CLICK_TARGET = 5; // Klik logo berapa kali untuk membuka admin login
 
 // ─── GLOBALS ──────────────────────────────────
