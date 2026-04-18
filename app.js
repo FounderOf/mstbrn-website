@@ -13,15 +13,12 @@ const TEAM_ROLES = {
 
   // ── TINGKAT 1: FOUNDER / OWNER ──────────────────
   "LeonYon1":   { role: "founder_owner", display: "Founder",    subDisplay: "Owner",              order: 0, icon: "👑", divisi: "founder_owner" },
-  "namaowner2":   { role: "founder_owner", display: "Founder",    subDisplay: "Owner",              order: 0, icon: "👑", divisi: "founder_owner" },
 
   // ── TINGKAT 2: CO FOUNDER / MANAGER SERVER ──────
   "NiksTry_": { role: "cofounder",     display: "CO Founder", subDisplay: "Manager Server",     order: 1, icon: "⚡", divisi: "cofounder" },
-  "namamanager2": { role: "cofounder",     display: "CO Founder", subDisplay: "Manager Server",     order: 1, icon: "⚡", divisi: "cofounder" },
-
+  
   // ── TINGKAT 3: MENTRI PERTAHANAN / KETUA ────────
-  "namaketua1":   { role: "ketua",         display: "Ketua",      subDisplay: "Mentri Pertahanan",  order: 2, icon: "🛡️", divisi: "ketua" },
-  "namaketua2":   { role: "ketua",         display: "Ketua",      subDisplay: "Mentri Pertahanan",  order: 2, icon: "🛡️", divisi: "ketua" },
+  "Skay":   { role: "ketua",         display: "Ketua",      subDisplay: "Mentri Pertahanan",  order: 2, icon: "🛡️", divisi: "ketua" },
 
   // ── TINGKAT 4: DIVISI ADMINISTRASI ──────────────
   "namaadmin1":   { role: "admin",         display: "Admin",      subDisplay: "Divisi Administrasi",order: 3, icon: "🔧", divisi: "admin" },
