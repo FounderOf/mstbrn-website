@@ -33,7 +33,7 @@ const TEAM_ROLES = {
 // Divisi info untuk rendering org chart
 const DIVISI_INFO = {
   founder_owner: { label: "Founder / Owner",              icon: "👑", color: "#FFD700", border: "rgba(255,215,0,.35)",   bg: "rgba(255,215,0,.06)",   cls: "b-owner"     },
-  rajaiblis:     { label: "Raja Iblis / Manager Server",  icon: "😈", color: "#48C4FF", border: "rgba(72,196,255,.35)",  bg: "rgba(72,196,255,.06)",  cls: "b-cofounder" },
+  rajaiblis:     { label: "Raja Iblis / Manager Server",  icon: "😈", color: "#48C4FF", border: "rgba(72,196,255,.35)",  bg: "rgba(72,196,255,.06)",  cls: "b-rajaiblis" },
   ketua:         { label: "Mentri Pertahanan / Ketua",    icon: "🛡️", color: "#7B9FFF", border: "rgba(123,159,255,.35)",bg: "rgba(123,159,255,.06)", cls: "b-ketua"     },
   admin:         { label: "Divisi Administrasi",          icon: "🔧", color: "#2B8EFF", border: "rgba(43,142,255,.3)",   bg: "rgba(43,142,255,.05)",  cls: "b-admin"     },
 };
