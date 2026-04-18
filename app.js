@@ -13,7 +13,7 @@ const TEAM_ROLES = {
   "namaowner":    { role: "owner",     display: "Owner",     order: 0, icon: "👑" },
 
   // FOUNDER
-  "namafounder":  { role: "founder",   display: "Founder",   order: 1, icon: "⭐" },
+  "Niks":  { role: "founder",   display: "Founder",   order: 1, icon: "⭐" },
 
   // DEVELOPER
   "namadev":      { role: "developer", display: "Developer", order: 2, icon: "💻" },
