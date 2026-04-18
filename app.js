@@ -1,28 +1,42 @@
 // =============================================
 //   NEXTGEN COLLECTIVE — APP.JS
-//   Auto-role by username, leaderboard, admin
+//   Org-structure roles + badge on posts/comments
 // =============================================
 
-// ─── TEAM ROLES CONFIG ─────────────────────────
-// Edit bagian ini untuk mengatur peran tim.
-// Format: "username_lowercase": { role, display, order, badge }
-// Saat user daftar dengan username ini, peran otomatis ditetapkan.
+// ═══════════════════════════════════════════════════
+//   STRUKTUR ORGANISASI NEXTGEN COLLECTIVE
+//   Edit username sesuai nama asli anggota tim.
+//   Username bersifat case-insensitive.
+// ═══════════════════════════════════════════════════
 
 const TEAM_ROLES = {
-  // ── Ganti dengan username asli ──────────────────
-  "ownerku":      { role: "owner",     display: "Owner",     order: 0, icon: "👑" },
-  "NiksTry":    { role: "founder",   display: "Founder",   order: 1, icon: "⭐" },
-  "developerku":  { role: "developer", display: "Developer", order: 2, icon: "💻" },
-  "adminku":      { role: "admin",     display: "Admin",     order: 3, icon: "" },
-  "staffku":      { role: "staff",     display: "Staff",     order: 4, icon: "" },
-  // Tambah lebih banyak di sini:
-  // "namauser": { role: "admin", display: "Admin", order: 3, icon: "" },
+
+  // ── TINGKAT 1: FOUNDER / OWNER ──────────────────
+  "LeonYon1":   { role: "founder_owner", display: "Founder",    subDisplay: "Owner",              order: 0, icon: "👑", divisi: "founder_owner" },
+  "namaowner2":   { role: "founder_owner", display: "Founder",    subDisplay: "Owner",              order: 0, icon: "👑", divisi: "founder_owner" },
+
+  // ── TINGKAT 2: CO FOUNDER / MANAGER SERVER ──────
+  "NiksTry_": { role: "cofounder",     display: "CO Founder", subDisplay: "Manager Server",     order: 1, icon: "⚡", divisi: "cofounder" },
+  "namamanager2": { role: "cofounder",     display: "CO Founder", subDisplay: "Manager Server",     order: 1, icon: "⚡", divisi: "cofounder" },
+
+  // ── TINGKAT 3: MENTRI PERTAHANAN / KETUA ────────
+  "namaketua1":   { role: "ketua",         display: "Ketua",      subDisplay: "Mentri Pertahanan",  order: 2, icon: "🛡️", divisi: "ketua" },
+  "namaketua2":   { role: "ketua",         display: "Ketua",      subDisplay: "Mentri Pertahanan",  order: 2, icon: "🛡️", divisi: "ketua" },
+
+  // ── TINGKAT 4: DIVISI ADMINISTRASI ──────────────
+  "namaadmin1":   { role: "admin",         display: "Admin",      subDisplay: "Divisi Administrasi",order: 3, icon: "🔧", divisi: "admin" },
+  "namaadmin2":   { role: "admin",         display: "Admin",      subDisplay: "Divisi Administrasi",order: 3, icon: "🔧", divisi: "admin" },
+  "namaadmin3":   { role: "admin",         display: "Admin",      subDisplay: "Divisi Administrasi",order: 3, icon: "🔧", divisi: "admin" },
+  "namaadmin4":   { role: "admin",         display: "Admin",      subDisplay: "Divisi Administrasi",order: 3, icon: "🔧", divisi: "admin" },
+  // Tambah lebih banyak:
+  // "namaadmin5": { role: "admin", display: "Admin", subDisplay: "Divisi Administrasi", order: 3, icon: "🔧", divisi: "admin" },
+
 };
 
 // Role yang punya akses admin panel
-const ADMIN_ROLES = ["owner", "founder", "developer", "admin", "staff"];
+const ADMIN_ROLES = ["founder_owner", "cofounder", "ketua", "admin"];
 
-// ─── LEADERBOARD SCORE WEIGHTS ─────────────────
+// Leaderboard score weights
 const SCORE_WEIGHTS = { post: 10, like: 2, comment: 1 };
 
 // ─── GLOBALS ───────────────────────────────────
@@ -59,7 +73,7 @@ auth.onAuthStateChanged(async (user) => {
   }
 });
 
-// ─── HELPERS: ROLE ─────────────────────────────
+// ─── ROLE HELPERS ──────────────────────────────
 function getRoleForUsername(username) {
   if (!username) return null;
   return TEAM_ROLES[username.toLowerCase()] || null;
@@ -69,17 +83,38 @@ function isAdminRole(role) {
   return ADMIN_ROLES.includes(role);
 }
 
+// Warna badge per role
 function getRoleBadgeClass(role) {
-  const map = { owner: "role-owner", founder: "role-founder", developer: "role-developer", admin: "role-admin", staff: "role-staff", member: "role-member" };
+  const map = {
+    founder_owner: "role-owner",
+    cofounder:     "role-cofounder",
+    ketua:         "role-ketua",
+    admin:         "role-admin",
+    member:        "role-member"
+  };
   return map[role] || "role-member";
 }
 
+// Label singkat untuk badge di postingan & komentar
+function getRoleBadgeLabel(username, role) {
+  const entry = getRoleForUsername(username);
+  if (entry) return entry.display;        // pakai display dari TEAM_ROLES
+  if (role === "member") return null;     // member tidak dapat badge
+  return null;
+}
+
 function getRoleDisplay(role) {
-  const map = { owner: "Owner", founder: "Founder", developer: "Developer", admin: "Admin", staff: "Staff", member: "Member" };
+  const map = {
+    founder_owner: "Founder / Owner",
+    cofounder:     "CO Founder",
+    ketua:         "Ketua",
+    admin:         "Admin",
+    member:        "Member"
+  };
   return map[role] || "Member";
 }
 
-// ─── AUTH: FORMS ───────────────────────────────
+// ─── AUTH FORMS ────────────────────────────────
 function showReg() {
   document.querySelectorAll(".auth-form").forEach(f => f.classList.remove("active"));
   document.getElementById("registerForm").classList.add("active");
@@ -91,8 +126,8 @@ function showLogin() {
 
 async function loginUser() {
   const email = document.getElementById("loginEmail").value.trim();
-  const pw = document.getElementById("loginPassword").value;
-  const err = document.getElementById("loginErr");
+  const pw    = document.getElementById("loginPassword").value;
+  const err   = document.getElementById("loginErr");
   err.textContent = "";
   if (!email || !pw) { err.textContent = "Mohon isi semua kolom."; return; }
   try {
@@ -108,12 +143,9 @@ async function registerUser() {
   err.textContent = "";
   if (!username || !email || !pw) { err.textContent = "Mohon isi semua kolom."; return; }
   if (username.length < 3) { err.textContent = "Username minimal 3 karakter."; return; }
-  if (pw.length < 6) { err.textContent = "Password minimal 6 karakter."; return; }
-
-  // Auto-detect role dari username
+  if (pw.length < 6)       { err.textContent = "Password minimal 6 karakter."; return; }
   const teamEntry = getRoleForUsername(username);
   const role = teamEntry ? teamEntry.role : "member";
-
   try {
     const cred = await auth.createUserWithEmailAndPassword(email, pw);
     await db.collection("users").doc(cred.user.uid).set({
@@ -132,13 +164,13 @@ async function logoutUser() {
 
 function friendlyErr(code) {
   const m = {
-    "auth/user-not-found": "Akun tidak ditemukan.",
-    "auth/wrong-password": "Password salah.",
-    "auth/email-already-in-use": "Email sudah terdaftar.",
-    "auth/invalid-email": "Format email tidak valid.",
-    "auth/too-many-requests": "Terlalu banyak percobaan. Coba lagi nanti.",
-    "auth/invalid-credential": "Email atau password salah.",
-    "auth/weak-password": "Password terlalu lemah.",
+    "auth/user-not-found":      "Akun tidak ditemukan.",
+    "auth/wrong-password":      "Password salah.",
+    "auth/email-already-in-use":"Email sudah terdaftar.",
+    "auth/invalid-email":       "Format email tidak valid.",
+    "auth/too-many-requests":   "Terlalu banyak percobaan. Coba lagi nanti.",
+    "auth/invalid-credential":  "Email atau password salah.",
+    "auth/weak-password":       "Password terlalu lemah.",
   };
   return m[code] || "Terjadi kesalahan. Coba lagi.";
 }
@@ -157,10 +189,8 @@ function hideApp() {
 }
 
 async function initApp() {
-  // Sync role DULU sebelum apapun dirender
   await syncRoleIfNeeded();
   updateUI();
-  // Tampilkan admin gate setelah role pasti sudah benar
   if (isAdminRole(currentUserData?.role)) {
     document.querySelectorAll(".admin-gate").forEach(el => el.classList.remove("hidden"));
   }
@@ -170,40 +200,29 @@ async function initApp() {
 }
 
 // ─── SYNC ROLE ─────────────────────────────────
-// Cek apakah username cocok TEAM_ROLES, jika iya update role di Firestore
 async function syncRoleIfNeeded() {
   if (!currentUser || !currentUserData) return;
   const expected = getRoleForUsername(currentUserData.username);
-  if (!expected) {
-    // Username tidak ada di TEAM_ROLES — pastikan role = "member"
-    // kecuali sudah owner/founder (jangan downgrade tim lama)
-    return;
-  }
+  if (!expected) return;
   if (expected.role !== currentUserData.role) {
     try {
       await db.collection("users").doc(currentUser.uid).update({ role: expected.role });
       currentUserData.role = expected.role;
       console.log(`✅ Role synced: ${currentUserData.username} → ${expected.role}`);
-    } catch (e) {
-      console.error("syncRoleIfNeeded error:", e);
-    }
+    } catch (e) { console.error("syncRoleIfNeeded error:", e); }
   }
 }
 
 function updateUI() {
-  const ava = currentUserData?.photoURL || genAva(currentUserData?.username || "N");
+  const ava      = currentUserData?.photoURL || genAva(currentUserData?.username || "N");
   const username = currentUserData?.username || "User";
-  const role = getRoleDisplay(currentUserData?.role || "member");
-
-  setAva("sbAvatar", ava, username);
+  const roleDisp = getRoleDisplay(currentUserData?.role || "member");
+  setAva("sbAvatar",    ava, username);
   setAva("composerAva", ava, username);
-  setAva("commentAva", ava, username);
+  setAva("commentAva",  ava, username);
   setText("sbUsername", username);
-  setText("sbRole", role);
-
-  if (isAdminRole(currentUserData?.role)) {
-    setAva("adminChatAva", ava, username);
-  }
+  setText("sbRole",     roleDisp);
+  if (isAdminRole(currentUserData?.role)) setAva("adminChatAva", ava, username);
 }
 
 // ─── PAGE NAVIGATION ───────────────────────────
@@ -211,75 +230,81 @@ function showPage(name, el) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   const t = document.getElementById("page-" + name);
   if (t) t.classList.add("active");
-
   document.querySelectorAll(".sbnav-item").forEach(i => i.classList.remove("active"));
   document.querySelectorAll(".mbn").forEach(i => i.classList.remove("active"));
   if (el) { const nav = el.closest?.(".sbnav-item,.mbn") || el; if (nav) nav.classList.add("active"); }
-
   if (name === "profile")     loadProfile();
   if (name === "explore")     loadExploreFeed();
   if (name === "leaderboard") loadLeaderboard();
   if (name === "admin")       { if (isAdminRole(currentUserData?.role)) loadAdminChat(); }
 }
 
-// ─── TEAM PANEL ────────────────────────────────
+// ─── TEAM PANEL (ORG CHART STYLE) ─────────────
 async function loadTeamPanel() {
   const el = document.getElementById("teamLeaderboard");
   if (!el) return;
-
-  // Fetch all users
   try {
     const snap = await db.collection("users").get();
     const users = [];
-    snap.forEach(doc => {
-      const d = doc.data();
-      users.push({ id: doc.id, ...d });
-    });
+    snap.forEach(doc => users.push({ id: doc.id, ...doc.data() }));
 
-    // Compute score for each
-    users.forEach(u => {
-      u._score = (u.postCount || 0) * SCORE_WEIGHTS.post +
-                 (u.likeCount || 0) * SCORE_WEIGHTS.like +
-                 (u.commentCount || 0) * SCORE_WEIGHTS.comment;
-    });
+    // Kelompokkan per divisi dari TEAM_ROLES
+    const divGroups = {
+      founder_owner: { label: "Founder / Owner",          icon: "👑", color: "#FFD700", borderColor: "rgba(255,215,0,0.4)",  members: [] },
+      cofounder:     { label: "CO Founder / Manager Server", icon: "⚡", color: "#00CFFF", borderColor: "rgba(0,207,255,0.35)", members: [] },
+      ketua:         { label: "Mentri Pertahanan / Ketua",icon: "🛡️", color: "#7B9FFF", borderColor: "rgba(123,159,255,0.35)",members: [] },
+      admin:         { label: "Divisi Administrasi",       icon: "🔧", color: "#48C4FF", borderColor: "rgba(72,196,255,0.3)", members: [] },
+    };
 
-    // Sort: first by role order, then by score
-    users.sort((a, b) => {
-      const aEntry = getRoleForUsername(a.username);
-      const bEntry = getRoleForUsername(b.username);
-      const aOrder = aEntry ? aEntry.order : 99;
-      const bOrder = bEntry ? bEntry.order : 99;
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      return b._score - a._score;
+    // Masukkan user yang punya entry di TEAM_ROLES
+    Object.entries(TEAM_ROLES).forEach(([uname, cfg]) => {
+      const found = users.find(u => u.username?.toLowerCase() === uname);
+      const displayName = found ? found.username : uname;
+      const ava = found?.photoURL || genAva(displayName);
+      divGroups[cfg.divisi]?.members.push({ username: displayName, ava, cfg, found });
     });
 
     el.innerHTML = "";
-    users.slice(0, 8).forEach((u, idx) => {
-      const entry = getRoleForUsername(u.username);
-      const roleClass = getRoleBadgeClass(u.role || "member");
-      const roleLabel = entry ? entry.display : getRoleDisplay(u.role || "member");
-      const icon = entry?.icon || "";
-      const ava = u.photoURL || genAva(u.username || "N");
-      const rank = idx + 1;
-      const rankClass = rank === 1 ? "r1" : rank === 2 ? "r2" : rank === 3 ? "r3" : "rn";
-      const rankEmoji = rank === 1 ? "👑" : "";
+    const divOrder = ["founder_owner", "cofounder", "ketua", "admin"];
+    divOrder.forEach((divKey, divIdx) => {
+      const grp = divGroups[divKey];
+      if (!grp.members.length) return;
 
-      const row = document.createElement("div");
-      row.className = `tlb-row ${rank<=3?"rank-"+rank:""}`;
-      row.innerHTML = `
-        <div class="tlb-rank ${rankClass}">${rank <= 3 ? ["🥇","🥈","🥉"][rank-1] : rank}</div>
-        <div class="tlb-ava-wrap">
-          <img class="tlb-ava" src="${esc(ava)}" alt="" onerror="this.src='${genAva(u.username||"N")}'" />
-          ${rankEmoji ? `<span class="tlb-ava-crown">${rankEmoji}</span>` : ""}
+      // Connector line atas (kecuali yang pertama)
+      if (divIdx > 0) {
+        const line = document.createElement("div");
+        line.className = "org-connector";
+        el.appendChild(line);
+      }
+
+      const section = document.createElement("div");
+      section.className = "org-section";
+      section.style.setProperty("--org-color", grp.color);
+      section.style.setProperty("--org-border", grp.borderColor);
+
+      // Header divisi
+      section.innerHTML = `
+        <div class="org-section-hdr">
+          <span class="org-section-icon">${grp.icon}</span>
+          <span class="org-section-label">${grp.label}</span>
         </div>
-        <div class="tlb-info">
-          <div class="tlb-name">${esc(u.username)}</div>
-          <span class="tlb-role-badge ${roleClass}">${icon} ${roleLabel}</span>
-        </div>
-        <div class="tlb-score">${u._score}<span>POIN</span></div>
+        <div class="org-members-list" id="orgDiv-${divKey}"></div>
       `;
-      el.appendChild(row);
+      el.appendChild(section);
+
+      const memberList = section.querySelector(`#orgDiv-${divKey}`);
+      grp.members.forEach(m => {
+        const row = document.createElement("div");
+        row.className = "org-member-row";
+        row.innerHTML = `
+          <img class="org-member-ava" src="${esc(m.ava)}" alt="" onerror="this.src='${genAva(m.username)}'" />
+          <span class="org-member-name">${esc(m.username)}</span>
+          <span class="org-member-tag" style="color:${grp.color};border-color:${grp.borderColor};background:${grp.borderColor.replace('0.3','0.08').replace('0.35','0.08').replace('0.4','0.08')}">${m.cfg.display}</span>
+        `;
+        memberList.appendChild(row);
+      });
     });
+
   } catch (e) {
     el.innerHTML = '<p style="text-align:center;padding:20px;color:var(--text-muted);font-size:.82rem;">Gagal memuat tim.</p>';
   }
@@ -289,19 +314,14 @@ async function loadTeamPanel() {
 async function loadLeaderboard() {
   const el = document.getElementById("leaderboardList");
   el.innerHTML = '<div class="ngc-loader"><div class="ngc-spinner"></div></div>';
-
   try {
     const snap = await db.collection("users").get();
     const users = [];
     snap.forEach(doc => {
       const d = doc.data();
-      const score = (d.postCount || 0) * SCORE_WEIGHTS.post +
-                    (d.likeCount || 0) * SCORE_WEIGHTS.like +
-                    (d.commentCount || 0) * SCORE_WEIGHTS.comment;
+      const score = (d.postCount||0)*SCORE_WEIGHTS.post + (d.likeCount||0)*SCORE_WEIGHTS.like + (d.commentCount||0)*SCORE_WEIGHTS.comment;
       users.push({ id: doc.id, ...d, _score: score });
     });
-
-    // Sort by role order first, then score
     users.sort((a, b) => {
       const aE = getRoleForUsername(a.username);
       const bE = getRoleForUsername(b.username);
@@ -310,30 +330,25 @@ async function loadLeaderboard() {
       if (aO !== bO) return aO - bO;
       return b._score - a._score;
     });
-
-    // Header row
     el.innerHTML = `
       <div class="lb-header-row">
         <div class="lbh-rank">#</div>
         <div class="lbh-ava"></div>
         <div class="lbh-info">ANGGOTA</div>
         <div class="lbh-score">SKOR</div>
-      </div>
-    `;
-
+      </div>`;
     users.forEach((u, idx) => {
       const rank = idx + 1;
-      const rankClass = rank === 1 ? "r1" : rank === 2 ? "r2" : rank === 3 ? "r3" : "rn";
+      const rankClass = rank===1?"r1":rank===2?"r2":rank===3?"r3":"rn";
       const entry = getRoleForUsername(u.username);
-      const roleClass = getRoleBadgeClass(u.role || "member");
-      const roleLabel = entry ? entry.display : getRoleDisplay(u.role || "member");
+      const roleClass = getRoleBadgeClass(u.role||"member");
+      const roleLabel = entry ? entry.display : getRoleDisplay(u.role||"member");
       const icon = entry?.icon || "";
-      const ava = u.photoURL || genAva(u.username || "N");
+      const ava = u.photoURL || genAva(u.username||"N");
       const isMe = u.id === currentUser?.uid;
-      const crown = rank === 1 ? "👑" : "";
-
+      const crown = rank===1?"👑":"";
       const row = document.createElement("div");
-      row.className = `lb-row ${rank <= 3 ? "rank-" + rank : ""}`;
+      row.className = `lb-row ${rank<=3?"rank-"+rank:""}`;
       row.innerHTML = `
         <div class="lb-rank-num ${rankClass}">${rank<=3?["🥇","🥈","🥉"][rank-1]:rank}</div>
         <div class="lb-ava-wrap">
@@ -343,18 +358,17 @@ async function loadLeaderboard() {
         <div class="lb-info">
           <div class="lb-name">
             ${esc(u.username)}
-            ${isMe ? '<span class="lb-you-tag">KAMU</span>' : ""}
+            ${isMe?'<span class="lb-you-tag">KAMU</span>':""}
           </div>
           <span class="tlb-role-badge ${roleClass}">${icon} ${roleLabel}</span>
         </div>
         <div class="lb-score-box">
           <div class="lb-score-num">${u._score}</div>
           <div class="lb-score-lbl">POIN</div>
-        </div>
-      `;
+        </div>`;
       el.appendChild(row);
     });
-  } catch (e) {
+  } catch(e) {
     el.innerHTML = '<div class="ngc-loader">Gagal memuat leaderboard.</div>';
   }
 }
@@ -364,7 +378,7 @@ function loadFeed() {
   const el = document.getElementById("postFeed");
   el.innerHTML = '<div class="ngc-loader"><div class="ngc-spinner"></div><span>Memuat postingan...</span></div>';
   if (feedUnsub) feedUnsub();
-  feedUnsub = db.collection("posts").orderBy("createdAt", "desc").limit(30)
+  feedUnsub = db.collection("posts").orderBy("createdAt","desc").limit(30)
     .onSnapshot(async (snap) => {
       if (snap.empty) {
         el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:52px 0;font-family:Rajdhani,sans-serif;letter-spacing:.08em;">BELUM ADA POSTINGAN. JADILAH YANG PERTAMA!</p>';
@@ -372,7 +386,7 @@ function loadFeed() {
       }
       el.innerHTML = "";
       for (const doc of snap.docs) el.appendChild(await renderPost(doc.id, doc.data()));
-    }, err => {
+    }, () => {
       el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:52px 0;">Gagal memuat postingan.</p>';
     });
 }
@@ -380,25 +394,33 @@ function loadFeed() {
 function loadExploreFeed() {
   const el = document.getElementById("exploreFeed");
   el.innerHTML = '<div class="ngc-loader"><div class="ngc-spinner"></div></div>';
-  db.collection("posts").orderBy("createdAt", "desc").limit(50).get().then(async snap => {
+  db.collection("posts").orderBy("createdAt","desc").limit(50).get().then(async snap => {
     if (snap.empty) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:52px 0;">Belum ada postingan.</p>'; return; }
     el.innerHTML = "";
     for (const doc of snap.docs) el.appendChild(await renderPost(doc.id, doc.data()));
   });
 }
 
-// ─── RENDER POST ───────────────────────────────
+// ─── RENDER POST (dengan badge role) ───────────
 async function renderPost(postId, data) {
   const card = document.createElement("div");
   card.className = "post-card"; card.id = "post-" + postId;
 
-  const authorName = data.username || "User";
-  const authorAva = data.photoURL || genAva(authorName);
-  const likeCount = data.likeCount || 0;
-  const commentCount = data.commentCount || 0;
-  const timeStr = data.createdAt ? fmtTime(data.createdAt.toDate()) : "Baru saja";
-  const isOwner = data.authorId === currentUser?.uid;
-  const isAdmin = isAdminRole(currentUserData?.role);
+  const authorName  = data.username || "User";
+  const authorAva   = data.photoURL || genAva(authorName);
+  const authorRole  = data.authorRole || "member";
+  const likeCount   = data.likeCount || 0;
+  const commentCount= data.commentCount || 0;
+  const timeStr     = data.createdAt ? fmtTime(data.createdAt.toDate()) : "Baru saja";
+  const isOwner     = data.authorId === currentUser?.uid;
+  const isAdmin     = isAdminRole(currentUserData?.role);
+
+  // Badge hanya untuk non-member
+  const badgeLabel  = getRoleBadgeLabel(authorName, authorRole);
+  const badgeClass  = getRoleBadgeClass(authorRole);
+  const badgeHTML   = badgeLabel
+    ? `<span class="post-role-badge ${badgeClass}">${badgeLabel}</span>`
+    : "";
 
   let liked = false;
   try {
@@ -410,7 +432,10 @@ async function renderPost(postId, data) {
     <div class="post-hdr">
       <img class="ava-md" src="${esc(authorAva)}" alt="" onerror="this.src='${genAva(authorName)}'" />
       <div class="post-author-wrap">
-        <div class="post-author-name">${esc(authorName)}</div>
+        <div class="post-author-name-row">
+          <span class="post-author-name">${esc(authorName)}</span>
+          ${badgeHTML}
+        </div>
         <div class="post-time">${timeStr}</div>
       </div>
       <div class="post-menu">
@@ -420,16 +445,16 @@ async function renderPost(postId, data) {
             <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             Bagikan
           </button>
-          ${(isOwner || isAdmin) ? `
+          ${(isOwner||isAdmin)?`
           <button class="dd-del" onclick="deletePost('${postId}');closeMenu('${postId}')">
             <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
             Hapus
-          </button>` : ""}
+          </button>`:""}
         </div>
       </div>
     </div>
-    ${data.imageURL ? `<img class="post-img" src="${esc(data.imageURL)}" alt="" loading="lazy" />` : ""}
-    ${data.caption ? `<div class="post-caption-wrap"><p class="post-caption">${esc(data.caption)}</p></div>` : ""}
+    ${data.imageURL?`<img class="post-img" src="${esc(data.imageURL)}" alt="" loading="lazy" />`:""}
+    ${data.caption?`<div class="post-caption-wrap"><p class="post-caption">${esc(data.caption)}</p></div>`:""}
     <div class="post-actions">
       <button class="action-btn ${liked?"liked":""}" id="like-${postId}" onclick="toggleLike('${postId}',this)">
         <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
@@ -449,17 +474,17 @@ async function renderPost(postId, data) {
 
 // ─── POST MENU ─────────────────────────────────
 function toggleMenu(id) {
-  const m = document.getElementById("menu-" + id);
+  const m = document.getElementById("menu-"+id);
   if (!m) return;
   m.classList.toggle("hidden");
   if (!m.classList.contains("hidden")) {
     setTimeout(() => {
-      function h(e) { if (!m.contains(e.target)) { m.classList.add("hidden"); document.removeEventListener("click", h); } }
+      function h(e) { if (!m.contains(e.target)) { m.classList.add("hidden"); document.removeEventListener("click",h); } }
       document.addEventListener("click", h);
     }, 10);
   }
 }
-function closeMenu(id) { document.getElementById("menu-" + id)?.classList.add("hidden"); }
+function closeMenu(id) { document.getElementById("menu-"+id)?.classList.add("hidden"); }
 
 // ─── SUBMIT POST ───────────────────────────────
 let selectedFile = null;
@@ -479,6 +504,7 @@ function removePreview() {
   document.getElementById("imgPreviewWrap").classList.add("hidden");
   document.getElementById("imgUpload").value = "";
 }
+
 async function submitPost() {
   const caption = document.getElementById("captionInput").value.trim();
   if (!caption && !selectedFile) { showToast("Tambahkan caption atau foto."); return; }
@@ -489,31 +515,33 @@ async function submitPost() {
   try {
     if (selectedFile) {
       prog.classList.remove("hidden");
-      const ref = storage.ref(`posts/${currentUser.uid}/${Date.now()}_${selectedFile.name}`);
+      const ref  = storage.ref(`posts/${currentUser.uid}/${Date.now()}_${selectedFile.name}`);
       const task = ref.put(selectedFile);
-      await new Promise((res, rej) => {
+      await new Promise((res,rej) => {
         task.on("state_changed",
-          s => { const p = Math.round(s.bytesTransferred/s.totalBytes*100); fill.style.width=p+"%"; txt.textContent=`Mengunggah... ${p}%`; },
+          s => { const p=Math.round(s.bytesTransferred/s.totalBytes*100); fill.style.width=p+"%"; txt.textContent=`Mengunggah... ${p}%`; },
           rej, async () => { imageURL = await task.snapshot.ref.getDownloadURL(); res(); }
         );
       });
     }
     txt.textContent = "Memposting...";
+    // Simpan role saat posting agar badge bisa tampil tanpa lookup tambahan
     await db.collection("posts").add({
-      caption, imageURL, authorId: currentUser.uid,
-      username: currentUserData?.username || "User",
-      photoURL: currentUserData?.photoURL || "",
+      caption, imageURL,
+      authorId:   currentUser.uid,
+      username:   currentUserData?.username || "User",
+      photoURL:   currentUserData?.photoURL || "",
+      authorRole: currentUserData?.role || "member",
       likeCount: 0, commentCount: 0,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    // Increment user post count for leaderboard
     await db.collection("users").doc(currentUser.uid).update({ postCount: firebase.firestore.FieldValue.increment(1) });
     document.getElementById("captionInput").value = "";
-    removePreview(); prog.classList.add("hidden"); fill.style.width = "0%";
+    removePreview(); prog.classList.add("hidden"); fill.style.width="0%";
     showToast("✅ Postingan berhasil dikirim!");
     loadStats(); loadTeamPanel();
-  } catch (e) {
-    prog.classList.add("hidden"); showToast("❌ Gagal memposting: " + e.message);
+  } catch(e) {
+    prog.classList.add("hidden"); showToast("❌ Gagal memposting: "+e.message);
   }
 }
 
@@ -521,22 +549,21 @@ async function submitPost() {
 async function toggleLike(postId, btn) {
   const likeRef = db.collection("posts").doc(postId).collection("likes").doc(currentUser.uid);
   const postRef = db.collection("posts").doc(postId);
-  const cnt = document.getElementById("lc-" + postId);
+  const cnt     = document.getElementById("lc-"+postId);
   const ld = await likeRef.get();
   if (ld.exists) {
     await likeRef.delete();
     await postRef.update({ likeCount: firebase.firestore.FieldValue.increment(-1) });
-    btn.classList.remove("liked"); cnt.textContent = Math.max(0, parseInt(cnt.textContent)-1);
+    btn.classList.remove("liked"); cnt.textContent = Math.max(0,parseInt(cnt.textContent)-1);
   } else {
     await likeRef.set({ at: firebase.firestore.FieldValue.serverTimestamp() });
     await postRef.update({ likeCount: firebase.firestore.FieldValue.increment(1) });
-    // Update liker's count
     await db.collection("users").doc(currentUser.uid).update({ likeCount: firebase.firestore.FieldValue.increment(1) });
     btn.classList.add("liked"); cnt.textContent = parseInt(cnt.textContent)+1;
   }
 }
 
-// ─── COMMENTS ──────────────────────────────────
+// ─── COMMENTS (dengan badge) ───────────────────
 function openComments(postId) {
   activePostId = postId;
   document.getElementById("commentModal").classList.remove("hidden");
@@ -551,17 +578,30 @@ function closeComments() {
 async function loadComments(postId) {
   const el = document.getElementById("commentsList");
   el.innerHTML = '<div class="ngc-loader" style="padding:16px 0"><div class="ngc-spinner"></div></div>';
-  const snap = await db.collection("posts").doc(postId).collection("comments").orderBy("createdAt","asc").limit(50).get();
-  if (snap.empty) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:.82rem;padding:16px 0;">Belum ada komentar.</p>'; return; }
+  const snap = await db.collection("posts").doc(postId).collection("comments")
+    .orderBy("createdAt","asc").limit(50).get();
+  if (snap.empty) {
+    el.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:.82rem;padding:16px 0;">Belum ada komentar.</p>';
+    return;
+  }
   el.innerHTML = "";
   snap.forEach(doc => {
     const d = doc.data();
+    const commentRole  = d.authorRole || "member";
+    const badgeLabel   = getRoleBadgeLabel(d.username, commentRole);
+    const badgeClass   = getRoleBadgeClass(commentRole);
+    const badgeHTML    = badgeLabel
+      ? `<span class="comment-role-badge ${badgeClass}">${badgeLabel}</span>`
+      : "";
     const div = document.createElement("div");
     div.className = "comment-item";
     div.innerHTML = `
       <img class="ava-sm" src="${esc(d.photoURL||genAva(d.username))}" alt="" onerror="this.src='${genAva(d.username)}'" />
       <div class="comment-body">
-        <div class="comment-author">${esc(d.username)}</div>
+        <div class="comment-author-row">
+          <span class="comment-author">${esc(d.username)}</span>
+          ${badgeHTML}
+        </div>
         <div class="comment-text">${esc(d.text)}</div>
         <div class="comment-time">${d.createdAt?fmtTime(d.createdAt.toDate()):"Baru saja"}</div>
       </div>`;
@@ -569,16 +609,19 @@ async function loadComments(postId) {
   });
   el.scrollTop = el.scrollHeight;
 }
+
 async function addComment() {
   const input = document.getElementById("commentInput");
-  const text = input.value.trim();
+  const text  = input.value.trim();
   if (!text || !activePostId) return;
   input.value = "";
   await db.collection("posts").doc(activePostId).collection("comments").add({
-    text, authorId: currentUser.uid,
-    username: currentUserData?.username || "User",
-    photoURL: currentUserData?.photoURL || "",
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    text,
+    authorId:   currentUser.uid,
+    username:   currentUserData?.username || "User",
+    photoURL:   currentUserData?.photoURL || "",
+    authorRole: currentUserData?.role || "member",      // simpan role untuk badge
+    createdAt:  firebase.firestore.FieldValue.serverTimestamp()
   });
   await db.collection("posts").doc(activePostId).update({ commentCount: firebase.firestore.FieldValue.increment(1) });
   await db.collection("users").doc(currentUser.uid).update({ commentCount: firebase.firestore.FieldValue.increment(1) });
@@ -610,49 +653,54 @@ async function loadProfile() {
   const ava = currentUserData?.photoURL || genAva(currentUserData?.username||"N");
   setAva("profileAva", ava, currentUserData?.username||"N");
   setText("profileUsername", currentUserData?.username||"—");
-  setText("profileEmail", currentUser?.email||"—");
-  setText("profileBio", currentUserData?.bio||"Belum ada bio.");
+  setText("profileEmail",    currentUser?.email||"—");
+  setText("profileBio",      currentUserData?.bio||"Belum ada bio.");
   const chip = document.getElementById("profileRoleChip");
-  if (chip) { chip.textContent = getRoleDisplay(currentUserData?.role||"member"); chip.className = `profile-role-chip`; }
+  if (chip) chip.textContent = getRoleDisplay(currentUserData?.role||"member");
 
   const el = document.getElementById("userPostFeed");
   el.innerHTML = '<div class="ngc-loader"><div class="ngc-spinner"></div></div>';
-  const snap = await db.collection("posts").where("authorId","==",currentUser.uid).orderBy("createdAt","desc").limit(20).get();
-  if (snap.empty) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:48px 0;font-family:Rajdhani,sans-serif;letter-spacing:.08em;">BELUM ADA POSTINGAN.</p>'; return; }
+  const snap = await db.collection("posts")
+    .where("authorId","==",currentUser.uid)
+    .orderBy("createdAt","desc").limit(20).get();
+  if (snap.empty) {
+    el.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:48px 0;font-family:Rajdhani,sans-serif;letter-spacing:.08em;">BELUM ADA POSTINGAN.</p>';
+    return;
+  }
   el.innerHTML = "";
   for (const doc of snap.docs) el.appendChild(await renderPost(doc.id, doc.data()));
 }
+
 function openEditProfile() {
   document.getElementById("editUsername").value = currentUserData?.username||"";
-  document.getElementById("editBio").value = currentUserData?.bio||"";
+  document.getElementById("editBio").value      = currentUserData?.bio||"";
   document.getElementById("editProfileModal").classList.remove("hidden");
 }
 function closeEditProfile() { document.getElementById("editProfileModal").classList.add("hidden"); }
+
 async function saveProfile() {
   const username = document.getElementById("editUsername").value.trim();
-  const bio = document.getElementById("editBio").value.trim();
+  const bio      = document.getElementById("editBio").value.trim();
   if (!username) { showToast("Username tidak boleh kosong."); return; }
-  // Re-detect role from new username — kalau tidak ada di TEAM_ROLES, pertahankan role lama
   const entry = getRoleForUsername(username);
-  const role = entry ? entry.role : (currentUserData.role === "member" ? "member" : currentUserData.role);
+  const role  = entry ? entry.role : (isAdminRole(currentUserData.role) ? currentUserData.role : "member");
   try {
     await db.collection("users").doc(currentUser.uid).update({ username, bio, role });
     currentUserData.username = username;
-    currentUserData.bio = bio;
-    currentUserData.role = role;
+    currentUserData.bio      = bio;
+    currentUserData.role     = role;
     closeEditProfile();
     updateUI();
-    // Refresh admin gate berdasarkan role terbaru
     if (isAdminRole(role)) {
       document.querySelectorAll(".admin-gate").forEach(el => el.classList.remove("hidden"));
     } else {
       document.querySelectorAll(".admin-gate").forEach(el => el.classList.add("hidden"));
     }
-    loadProfile();
-    loadTeamPanel();
+    loadProfile(); loadTeamPanel();
     showToast("✅ Profil diperbarui! Role: " + getRoleDisplay(role));
   } catch(e) { showToast("❌ Gagal menyimpan."); }
 }
+
 async function uploadAva(e) {
   const f = e.target.files[0]; if (!f) return;
   showToast("Mengunggah foto profil...");
@@ -672,7 +720,8 @@ async function loadStats() {
   try {
     const u = await db.collection("users").get();
     const p = await db.collection("posts").get();
-    setText("statMembers", u.size); setText("statPosts", p.size);
+    setText("statMembers", u.size);
+    setText("statPosts",   p.size);
   } catch(e) {}
 }
 
@@ -685,7 +734,10 @@ function loadAdminChat() {
   chatUnsub = db.collection("adminChat").orderBy("createdAt","asc").limit(100)
     .onSnapshot(snap => {
       el.innerHTML = "";
-      if (snap.empty) { el.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:.82rem;padding:30px 0;">Belum ada pesan.</p>'; return; }
+      if (snap.empty) {
+        el.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:.82rem;padding:30px 0;">Belum ada pesan.</p>';
+        return;
+      }
       snap.forEach(doc => {
         const d = doc.data();
         const isOwn = d.authorId === currentUser.uid;
@@ -703,14 +755,16 @@ function loadAdminChat() {
       el.scrollTop = el.scrollHeight;
     });
 }
+
 async function sendAdminChat() {
   if (!isAdminRole(currentUserData?.role)) return;
   const input = document.getElementById("adminChatInput");
-  const text = input.value.trim(); if (!text) return;
+  const text  = input.value.trim(); if (!text) return;
   input.value = "";
   try {
     await db.collection("adminChat").add({
-      text, authorId: currentUser.uid,
+      text,
+      authorId: currentUser.uid,
       username: currentUserData?.username || "Admin",
       photoURL: currentUserData?.photoURL || "",
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -727,11 +781,10 @@ async function loadAdminUsers() {
   el.innerHTML = "";
   snap.forEach(doc => {
     const d = doc.data();
-    const entry = getRoleForUsername(d.username);
+    const entry     = getRoleForUsername(d.username);
     const roleClass = getRoleBadgeClass(d.role||"member");
-    const roleLabel = getRoleDisplay(d.role||"member");
-    const badgeClass = d.banned ? "role-banned" : roleClass;
-    const badgeLabel = d.banned ? "Banned" : roleLabel;
+    const roleLabel = d.banned ? "Banned" : (entry ? entry.display : getRoleDisplay(d.role||"member"));
+    const bClass    = d.banned ? "role-member" : roleClass;
     const row = document.createElement("div");
     row.className = "admin-user-row";
     row.innerHTML = `
@@ -740,19 +793,20 @@ async function loadAdminUsers() {
         <span class="aur-name">${esc(d.username)}</span>
         <span class="aur-email">${esc(d.email)}</span>
       </div>
-      <span class="tlb-role-badge ${badgeClass}">${badgeLabel}</span>
-      ${doc.id !== currentUser.uid && !["owner","founder"].includes(d.role) ? `
+      <span class="tlb-role-badge ${bClass}">${roleLabel}</span>
+      ${doc.id!==currentUser.uid&&!["founder_owner"].includes(d.role)?`
         <button class="btn-danger-sm" onclick="toggleBan('${doc.id}',${d.banned})">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
           ${d.banned?"Unban":"Ban"}
-        </button>` : ""}`;
+        </button>`:""}`;
     el.appendChild(row);
   });
 }
+
 async function toggleBan(uid, isBanned) {
   if (!confirm(isBanned?"Unban user ini?":"Ban user ini?")) return;
   await db.collection("users").doc(uid).update({ banned: !isBanned });
-  showToast(isBanned ? "✅ User di-unban." : "⛔ User di-ban.");
+  showToast(isBanned?"✅ User di-unban.":"⛔ User di-ban.");
   loadAdminUsers();
 }
 
@@ -786,14 +840,14 @@ function loadTeamRolesPreview() {
 function switchAdminTab(tab, btn) {
   document.querySelectorAll(".atab").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
-  document.getElementById("adminTabChat").classList.toggle("hidden", tab !== "chat");
-  document.getElementById("adminTabUsers").classList.toggle("hidden", tab !== "users");
-  document.getElementById("adminTabPosts").classList.toggle("hidden", tab !== "posts");
-  document.getElementById("adminTabTeam").classList.toggle("hidden", tab !== "team");
-  if (tab === "chat")  loadAdminChat();
-  if (tab === "users") loadAdminUsers();
-  if (tab === "posts") loadAdminPosts();
-  if (tab === "team")  loadTeamRolesPreview();
+  document.getElementById("adminTabChat").classList.toggle("hidden",  tab!=="chat");
+  document.getElementById("adminTabUsers").classList.toggle("hidden", tab!=="users");
+  document.getElementById("adminTabPosts").classList.toggle("hidden", tab!=="posts");
+  document.getElementById("adminTabTeam").classList.toggle("hidden",  tab!=="team");
+  if (tab==="chat")  loadAdminChat();
+  if (tab==="users") loadAdminUsers();
+  if (tab==="posts") loadAdminPosts();
+  if (tab==="team")  loadTeamRolesPreview();
 }
 
 // ─── HELPERS ───────────────────────────────────
@@ -833,6 +887,6 @@ function showToast(msg) {
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add("hidden"),3200);
 }
 
-// ─── MODAL BACKDROP CLOSE ──────────────────────
-document.getElementById("editProfileModal").addEventListener("click", e => { if(e.target===document.getElementById("editProfileModal")) closeEditProfile(); });
-document.getElementById("commentModal").addEventListener("click", e => { if(e.target===document.getElementById("commentModal")) closeComments(); });
+// Modal backdrop close
+document.getElementById("editProfileModal").addEventListener("click", e=>{ if(e.target===document.getElementById("editProfileModal")) closeEditProfile(); });
+document.getElementById("commentModal").addEventListener("click", e=>{ if(e.target===document.getElementById("commentModal")) closeComments(); });
