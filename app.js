@@ -1,6 +1,6 @@
 // =============================================
 //   NEXTGEN COLLECTIVE — APP.JS
-//   Auto-role by username, leaderboard, admin
+//   Auto-role by Niks, leaderboard, admin
 // =============================================
 
 // ─── TEAM ROLES CONFIG ─────────────────────────
@@ -9,14 +9,25 @@
 // Saat user daftar dengan username ini, peran otomatis ditetapkan.
 
 const TEAM_ROLES = {
-  // ── Ganti dengan username asli ──────────────────
-  "ownerku":      { role: "owner",     display: "Owner",     order: 0, icon: "👑" },
-  "founderku":    { role: "founder",   display: "Founder",   order: 1, icon: "⭐" },
-  "developerku":  { role: "developer", display: "Developer", order: 2, icon: "💻" },
-  "adminku":      { role: "admin",     display: "Admin",     order: 3, icon: "" },
-  "staffku":      { role: "staff",     display: "Staff",     order: 4, icon: "" },
-  // Tambah lebih banyak di sini:
-  // "namauser": { role: "admin", display: "Admin", order: 3, icon: "" },
+  // OWNER
+  "namaowner":    { role: "owner",     display: "Owner",     order: 0, icon: "👑" },
+
+  // FOUNDER
+  "namafounder":  { role: "founder",   display: "Founder",   order: 1, icon: "⭐" },
+
+  // DEVELOPER
+  "namadev":      { role: "developer", display: "Developer", order: 2, icon: "💻" },
+
+  // ADMIN — bisa banyak
+  "admin1":       { role: "admin",     display: "Admin",     order: 3, icon: "" },
+  "admin2":       { role: "admin",     display: "Admin",     order: 3, icon: "" },
+  "admin3":       { role: "admin",     display: "Admin",     order: 3, icon: "" },
+  "admin4":       { role: "admin",     display: "Admin",     order: 3, icon: "" },
+
+  // STAFF — bisa banyak juga
+  "staff1":       { role: "staff",     display: "Staff",     order: 4, icon: "" },
+  "staff2":       { role: "staff",     display: "Staff",     order: 4, icon: "" },
+  "staff3":       { role: "staff",     display: "Staff",     order: 4, icon: "" },
 };
 
 // Role yang punya akses admin panel
