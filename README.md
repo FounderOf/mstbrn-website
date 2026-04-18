@@ -1,116 +1,72 @@
-# 🚀 MSTBRN Community v2 — Panduan Setup Firebase
+# 🚀 NextGen Collective — Panduan Setup
 
-## Struktur File
-
+## File Structure
 ```
-mstbrn2/
-├── index.html          ← Aplikasi utama (semua halaman)
-├── style.css           ← Semua styling
-├── app.js              ← Semua logika & fitur
-├── firebase-config.js  ← Isi dengan kredensial Firebase kamu
-├── logo.png            ← Logo MSTBRN Community
-└── PANDUAN.md          ← File ini
+ngc/
+├── index.html          ← Seluruh website
+├── style.css           ← Styling (tema NGC biru/navy)
+├── app.js              ← Logika + auto-role system
+├── firebase-config.js  ← Isi kredensial Firebase kamu
+├── logo.png            ← Logo NextGen Collective
+└── PANDUAN.md          ← Panduan ini
 ```
 
 ---
 
-## Langkah 1: Buat Firebase Project
+## Langkah 1: Setup Firebase Project
 
 1. Buka **https://console.firebase.google.com**
-2. Klik **"Add project"**
-3. Nama project: `mstbrn-community`
-4. Klik **"Create project"**
+2. Buat project baru: `nextgen-collective`
+3. Daftar Web App → salin `firebaseConfig`
+4. Paste ke `firebase-config.js`
 
 ---
 
-## Langkah 2: Daftarkan Web App
+## Langkah 2: Aktifkan Layanan Firebase
 
-1. Di dashboard Firebase, klik ikon **Web (`</>`)**
-2. Nama app: `MSTBRN Community`
-3. Salin `firebaseConfig` yang muncul
-4. Buka file `firebase-config.js` dan ganti nilai-nilainya:
+### Authentication
+- Firebase Console → Authentication → Get Started
+- Aktifkan **Email/Password**
 
-```js
-const firebaseConfig = {
-  apiKey: "AIza...",
-  authDomain: "mstbrn-community.firebaseapp.com",
-  projectId: "mstbrn-community",
-  storageBucket: "mstbrn-community.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234...:web:abc123"
-};
-```
+### Firestore Database
+- Firebase Console → Firestore Database → Create database → Production mode
+- Lokasi: `asia-southeast1` (rekomendasi untuk Indonesia)
 
----
-
-## Langkah 3: Aktifkan Authentication
-
-1. Firebase Console → **Authentication** → **Get Started**
-2. Tab **Sign-in method** → Aktifkan **Email/Password**
-3. Klik **Save**
-
----
-
-## Langkah 4: Buat Firestore Database
-
-1. Firebase Console → **Firestore Database** → **Create database**
-2. Pilih **production mode**
-3. Pilih lokasi server (contoh: `asia-southeast1` untuk Asia Tenggara)
-4. Klik **Done**
-
-### Rules Firestore (Paste di Firestore → Rules):
-
+### Rules Firestore:
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // Posts
     match /posts/{postId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null;
       allow update: if request.auth != null;
       allow delete: if request.auth != null && (
         request.auth.uid == resource.data.authorId ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['owner','founder','developer','admin','staff']
       );
-
-      match /likes/{likeId} {
-        allow read, write: if request.auth != null;
-      }
+      match /likes/{likeId} { allow read, write: if request.auth != null; }
       match /comments/{commentId} {
         allow read, create: if request.auth != null;
-        allow delete: if request.auth != null && (
-          request.auth.uid == resource.data.authorId ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-        );
+        allow delete: if request.auth != null;
       }
     }
-
-    // Admin Chat — hanya admin yang bisa akses
     match /adminChat/{msgId} {
       allow read, write: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['owner','founder','developer','admin','staff'];
     }
   }
 }
 ```
 
----
+### Firebase Storage
+- Firebase Console → Storage → Get Started → Production mode
 
-## Langkah 5: Aktifkan Storage
-
-1. Firebase Console → **Storage** → **Get Started**
-2. Pilih **production mode** → Done
-
-### Rules Storage (Paste di Storage → Rules):
-
+### Rules Storage:
 ```
 rules_version = '2';
 service firebase.storage {
@@ -129,116 +85,80 @@ service firebase.storage {
 
 ---
 
-## Langkah 6: Jadikan Diri Sendiri Admin
+## Langkah 3: Setting Auto-Role by Username
 
-1. Daftar akun di website
-2. Buka Firebase Console → Firestore → Collection `users`
-3. Temukan dokumen dengan UID kamu
-4. Ubah field: `"role": "user"` → `"role": "admin"`
-5. Refresh website — panel Admin akan muncul di sidebar
-
----
-
-## Langkah 7: Ubah Password Admin Rahasia
-
-Di file `app.js`, baris paling atas:
+Buka `app.js`, cari bagian `TEAM_ROLES` di atas file:
 
 ```js
-const ADMIN_SECRET_PASSWORD = "mstbrn_admin_2025"; // Ganti ini!
+const TEAM_ROLES = {
+  "ownerku":      { role: "owner",     display: "Owner",     order: 0, icon: "👑" },
+  "founderku":    { role: "founder",   display: "Founder",   order: 1, icon: "⭐" },
+  "developerku":  { role: "developer", display: "Developer", order: 2, icon: "💻" },
+  "adminku":      { role: "admin",     display: "Admin",     order: 3, icon: "" },
+  "staffku":      { role: "staff",     display: "Staff",     order: 4, icon: "" },
+};
 ```
 
-Ganti dengan password rahasia yang kuat dan simpan baik-baik.
+**Ganti** `"ownerku"`, `"founderku"`, dst. dengan username asli kamu.
+Username bersifat **case-insensitive** (huruf besar/kecil tidak berpengaruh).
+
+### Cara Kerja:
+- Saat seseorang **mendaftar** dengan username yang ada di `TEAM_ROLES`, peran otomatis ditetapkan.
+- Saat seseorang **mengubah username** ke nama yang terdaftar, peran juga diperbarui otomatis.
+- Anggota biasa yang tidak terdaftar di `TEAM_ROLES` mendapat peran `member`.
 
 ---
 
-## Cara Akses Panel Admin (Tombol Rahasia)
+## Langkah 4: Kustomisasi Links
 
-1. Buka halaman login
-2. **Klik logo MSTBRN sebanyak 5 kali** (muncul hint "4 lagi...", "3 lagi...", dst)
-3. Form password rahasia akan muncul
-4. Masukkan password admin rahasia
-5. Setelah berhasil, login dengan akun admin
-
----
-
-## Kustomisasi
-
-### Nama Tim / Pendiri (index.html)
-Cari bagian `.team-grid` dan ubah:
-- `NamaFounder` → nama founder sebenarnya
-- `NamaDeveloper` → nama developer sebenarnya
-- `NamaAdmin` → nama admin sebenarnya
-- `NamaStaff` → nama staff sebenarnya
-
-### Link Discord (index.html)
-Ganti semua `https://discord.gg/GANTI_LINK_DISCORD` dengan link Discord kamu.
-
-### Link Roblox Maps (index.html)
-Ganti:
-- `GANTI_ID_MAP_1` → ID game Roblox map 1
-- `GANTI_ID_MAP_2` → ID game Roblox map 2
-- `GANTI_ID_MAP_3` → ID game Roblox map 3
-
-### Link TikTok (index.html)
-Ganti `@GANTI_USERNAME_TIKTOK` dengan username TikTok kamu.
+Di `index.html`, ganti:
+- `https://discord.gg/GANTI_LINK_DISCORD` → link Discord kamu
+- `GANTI_ID_1`, `GANTI_ID_2`, `GANTI_ID_3` → ID game Roblox
+- `@GANTI_USERNAME_TIKTOK` → username TikTok kamu
 
 ---
 
-## Struktur Firestore Database
+## Struktur Database Firestore
 
 ```
-firestore/
-├── users/
-│   └── {uid}/
-│       ├── username: string
-│       ├── email: string
-│       ├── bio: string
-│       ├── photoURL: string
-│       ├── role: "user" | "admin"
-│       ├── banned: boolean
-│       └── createdAt: timestamp
-│
-├── posts/
-│   └── {postId}/
-│       ├── caption: string
-│       ├── imageURL: string
-│       ├── authorId: string
-│       ├── username: string
-│       ├── photoURL: string
-│       ├── likeCount: number
-│       ├── commentCount: number
-│       ├── createdAt: timestamp
-│       ├── likes/
-│       │   └── {uid}/ → { likedAt }
-│       └── comments/
-│           └── {id}/ → { text, authorId, username, photoURL, createdAt }
-│
-└── adminChat/
-    └── {msgId}/
-        ├── text: string
-        ├── authorId: string
-        ├── username: string
-        ├── photoURL: string
-        └── createdAt: timestamp
+users/{uid}/
+  username, email, bio, photoURL, role, banned
+  postCount, likeCount, commentCount  ← untuk Leaderboard
+  createdAt
+
+posts/{postId}/
+  caption, imageURL, authorId, username, photoURL
+  likeCount, commentCount, createdAt
+  /likes/{uid} → { at }
+  /comments/{id} → { text, authorId, username, photoURL, createdAt }
+
+adminChat/{msgId}/
+  text, authorId, username, photoURL, createdAt
 ```
 
 ---
 
-## Deploy (Gratis)
+## Sistem Leaderboard
+
+Skor dihitung otomatis:
+- **1 postingan** = 10 poin
+- **1 like diberikan** = 2 poin
+- **1 komentar ditulis** = 1 poin
+
+Tim (owner/founder/dll) selalu tampil di atas, diurutkan berdasarkan `order`.
+Member biasa diurutkan berdasarkan total skor.
+
+---
+
+## Deploy
+
+### Netlify (termudah):
+Drag folder `ngc` ke https://app.netlify.com/drop
 
 ### Firebase Hosting:
 ```bash
-npm install -g firebase-tools
+npm i -g firebase-tools
 firebase login
-firebase init hosting
-# Public directory: . (titik)
-# Single page app: No
+firebase init hosting  # public dir: .  |  SPA: No
 firebase deploy
 ```
-
-### Netlify (Drag & Drop):
-Buka https://netlify.com → drag folder `mstbrn2` ke dashboard → selesai!
-
----
-
-Selamat! 🎉 MSTBRN Community siap digunakan.
