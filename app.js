@@ -1,6 +1,6 @@
 // =============================================
 //   NEXTGEN COLLECTIVE — APP.JS
-//   Auto-role by Niks, leaderboard, admin
+//   Auto-role by username, leaderboard, admin
 // =============================================
 
 // ─── TEAM ROLES CONFIG ─────────────────────────
@@ -9,25 +9,14 @@
 // Saat user daftar dengan username ini, peran otomatis ditetapkan.
 
 const TEAM_ROLES = {
-  // OWNER
-  "namaowner":    { role: "owner",     display: "Owner",     order: 0, icon: "👑" },
-
-  // FOUNDER
-  "NiksTry":  { role: "founder",   display: "Founder",   order: 1, icon: "⭐" },
-
-  // DEVELOPER
-  "namadev":      { role: "developer", display: "Developer", order: 2, icon: "💻" },
-
-  // ADMIN — bisa banyak
-  "admin1":       { role: "admin",     display: "Admin",     order: 3, icon: "" },
-  "admin2":       { role: "admin",     display: "Admin",     order: 3, icon: "" },
-  "admin3":       { role: "admin",     display: "Admin",     order: 3, icon: "" },
-  "admin4":       { role: "admin",     display: "Admin",     order: 3, icon: "" },
-
-  // STAFF — bisa banyak juga
-  "staff1":       { role: "staff",     display: "Staff",     order: 4, icon: "" },
-  "staff2":       { role: "staff",     display: "Staff",     order: 4, icon: "" },
-  "staff3":       { role: "staff",     display: "Staff",     order: 4, icon: "" },
+  // ── Ganti dengan username asli ──────────────────
+  "ownerku":      { role: "owner",     display: "Owner",     order: 0, icon: "👑" },
+  "NiksTry":    { role: "founder",   display: "Founder",   order: 1, icon: "⭐" },
+  "developerku":  { role: "developer", display: "Developer", order: 2, icon: "💻" },
+  "adminku":      { role: "admin",     display: "Admin",     order: 3, icon: "" },
+  "staffku":      { role: "staff",     display: "Staff",     order: 4, icon: "" },
+  // Tambah lebih banyak di sini:
+  // "namauser": { role: "admin", display: "Admin", order: 3, icon: "" },
 };
 
 // Role yang punya akses admin panel
@@ -155,10 +144,10 @@ function friendlyErr(code) {
 }
 
 // ─── SHOW / HIDE APP ───────────────────────────
-function showApp() {
+async function showApp() {
   document.getElementById("authOverlay").classList.add("hidden");
   document.getElementById("mainApp").classList.remove("hidden");
-  initApp();
+  await initApp();
 }
 function hideApp() {
   document.getElementById("authOverlay").classList.remove("hidden");
@@ -167,26 +156,37 @@ function hideApp() {
   document.getElementById("loginForm").classList.add("active");
 }
 
-function initApp() {
-  syncRoleIfNeeded();
+async function initApp() {
+  // Sync role DULU sebelum apapun dirender
+  await syncRoleIfNeeded();
   updateUI();
-  loadFeed();
-  loadTeamPanel();
-  loadStats();
+  // Tampilkan admin gate setelah role pasti sudah benar
   if (isAdminRole(currentUserData?.role)) {
     document.querySelectorAll(".admin-gate").forEach(el => el.classList.remove("hidden"));
   }
+  loadFeed();
+  loadTeamPanel();
+  loadStats();
 }
 
 // ─── SYNC ROLE ─────────────────────────────────
-// Jika username cocok dengan TEAM_ROLES tapi role di Firestore belum diperbarui
+// Cek apakah username cocok TEAM_ROLES, jika iya update role di Firestore
 async function syncRoleIfNeeded() {
   if (!currentUser || !currentUserData) return;
   const expected = getRoleForUsername(currentUserData.username);
-  if (expected && expected.role !== currentUserData.role) {
-    await db.collection("users").doc(currentUser.uid).update({ role: expected.role });
-    currentUserData.role = expected.role;
-    updateUI();
+  if (!expected) {
+    // Username tidak ada di TEAM_ROLES — pastikan role = "member"
+    // kecuali sudah owner/founder (jangan downgrade tim lama)
+    return;
+  }
+  if (expected.role !== currentUserData.role) {
+    try {
+      await db.collection("users").doc(currentUser.uid).update({ role: expected.role });
+      currentUserData.role = expected.role;
+      console.log(`✅ Role synced: ${currentUserData.username} → ${expected.role}`);
+    } catch (e) {
+      console.error("syncRoleIfNeeded error:", e);
+    }
   }
 }
 
@@ -632,14 +632,25 @@ async function saveProfile() {
   const username = document.getElementById("editUsername").value.trim();
   const bio = document.getElementById("editBio").value.trim();
   if (!username) { showToast("Username tidak boleh kosong."); return; }
-  // Re-detect role from new username
+  // Re-detect role from new username — kalau tidak ada di TEAM_ROLES, pertahankan role lama
   const entry = getRoleForUsername(username);
-  const role = entry ? entry.role : currentUserData.role;
+  const role = entry ? entry.role : (currentUserData.role === "member" ? "member" : currentUserData.role);
   try {
     await db.collection("users").doc(currentUser.uid).update({ username, bio, role });
-    currentUserData.username = username; currentUserData.bio = bio; currentUserData.role = role;
-    closeEditProfile(); updateUI(); loadProfile(); loadTeamPanel();
-    showToast("✅ Profil diperbarui!");
+    currentUserData.username = username;
+    currentUserData.bio = bio;
+    currentUserData.role = role;
+    closeEditProfile();
+    updateUI();
+    // Refresh admin gate berdasarkan role terbaru
+    if (isAdminRole(role)) {
+      document.querySelectorAll(".admin-gate").forEach(el => el.classList.remove("hidden"));
+    } else {
+      document.querySelectorAll(".admin-gate").forEach(el => el.classList.add("hidden"));
+    }
+    loadProfile();
+    loadTeamPanel();
+    showToast("✅ Profil diperbarui! Role: " + getRoleDisplay(role));
   } catch(e) { showToast("❌ Gagal menyimpan."); }
 }
 async function uploadAva(e) {
