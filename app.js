@@ -1,898 +1,2132 @@
-// =============================================
-//   NEXTGEN COLLECTIVE — APP.JS v4 FINAL
-//   - Upload gambar & profil benar-benar fixed
-//   - Role detection by username (case-insensitive)
-//   - Admin nav muncul otomatis saat login
-//   - Badge di post & komentar
-//   - Team structure di bawah home
-// =============================================
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NextGen Collective</title>
 
-// ═══════════════════════════════════════════
-//  EDIT BAGIAN INI — STRUKTUR TIM
-//  Username harus PERSIS SAMA (case-insensitive)
-// ═══════════════════════════════════════════
-const TEAM_ROLES = {
-  // ── TINGKAT 1: FOUNDER / OWNER ──────────
-  "LeonYonn1":    { role: "founder_owner", display: "Founder",    divisi: "founder_owner", order: 0, icon: "👑" },
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 
-  // ── TINGKAT 2: CO FOUNDER / MANAGER ─────
-  "NiksTry_":  { role: "rajaiblis",     display: "Raja Iblis", divisi: "rajaiblis",     order: 1, icon: "😈" },
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  // ── TINGKAT 3: KETUA ─────────────────────
-  "Sekay":    { role: "ketua",         display: "Ketua",      divisi: "ketua",         order: 2, icon: "🛡️" },
-  
-  // ── TINGKAT 4: ADMIN (bisa banyak) ──────
-  "Ice":    { role: "admin",         display: "Admin",      divisi: "admin",         order: 3, icon: "🔧" },
-  "Silver":    { role: "admin",         display: "Admin",      divisi: "admin",         order: 3, icon: "🔧" },
-  "Mpittt":    { role: "admin",         display: "Admin",      divisi: "admin",         order: 3, icon: "🔧" },
-  "ZoesaC24":    { role: "admin",         display: "Admin",      divisi: "admin",         order: 3, icon: "🔧" },
-  // Tambah lebih banyak:
-  // "namaadmin5":  { role: "admin", display: "Admin", divisi: "admin", order: 3, icon: "🔧" },
-};
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-// Divisi info untuk rendering org chart
-const DIVISI_INFO = {
-  founder_owner: { label: "Founder / Owner",              icon: "👑", color: "#FFD700", border: "rgba(255,215,0,.35)",   bg: "rgba(255,215,0,.06)",   cls: "b-owner"     },
-  rajaiblis:     { label: "Raja Iblis / Manager Server",  icon: "😈", color: "#48C4FF", border: "rgba(72,196,255,.35)",  bg: "rgba(72,196,255,.06)",  cls: "b-rajaiblis" },
-  ketua:         { label: "Mentri Pertahanan / Ketua",    icon: "🛡️", color: "#7B9FFF", border: "rgba(123,159,255,.35)",bg: "rgba(123,159,255,.06)", cls: "b-ketua"     },
-  admin:         { label: "Divisi Administrasi",          icon: "🔧", color: "#2B8EFF", border: "rgba(43,142,255,.3)",   bg: "rgba(43,142,255,.05)",  cls: "b-admin"     },
-};
+  <style>
+    /* ================================================
+       NGC — NextGen Collective  |  CSS
+    ================================================ */
 
-// Role yang bisa akses admin panel
-const ADMIN_ROLES = ["founder_owner","rajaiblis","ketua","admin"];
-
-// Skor leaderboard
-const SCORE = { post: 10, like: 2, comment: 1 };
-
-// ─── GLOBALS ────────────────────────────────
-let CU   = null;  // currentUser
-let CUD  = null;  // currentUserData
-let activePid  = null;
-let feedUnsub  = null;
-let chatUnsub  = null;
-
-// ─── AUTH STATE ─────────────────────────────
-auth.onAuthStateChanged(async (user) => {
-  if (user) {
-    CU = user;
-    try {
-      const snap = await db.collection("users").doc(user.uid).get();
-      CUD = snap.exists ? snap.data() : {
-        username: user.email.split("@")[0], role: "member",
-        photoURL: "", bio: "", banned: false,
-        postCount:0, likeCount:0, commentCount:0
-      };
-    } catch (e) {
-      console.error("Fetch user error:", e);
-      CUD = { username: "User", role: "member", photoURL:"", bio:"", banned:false, postCount:0, likeCount:0, commentCount:0 };
+    /* === Variables === */
+    :root {
+      --bg-900:   #03050c;
+      --bg-800:   #070b15;
+      --bg-700:   #0c1220;
+      --bg-600:   #111928;
+      --card:     rgba(10, 18, 38, 0.75);
+      --card-hov: rgba(14, 24, 50, 0.85);
+      --blue:     #1a6fff;
+      --blue-lt:  #3d8dff;
+      --cyan:     #00d4ff;
+      --blue-glow:rgba(26,111,255,0.28);
+      --cyan-glow:rgba(0,212,255,0.18);
+      --grad:     linear-gradient(135deg, #1a6fff 0%, #00d4ff 100%);
+      --grad-r:   linear-gradient(135deg, #00d4ff 0%, #1a6fff 100%);
+      --text-100: #ffffff;
+      --text-200: #ccd6f0;
+      --text-400: #7a8aa8;
+      --text-600: #3e4d68;
+      --border:   rgba(255,255,255,0.07);
+      --border-b: rgba(26,111,255,0.35);
+      --gold:     #ffd700;
+      --red:      #ff4757;
+      --purple:   #a29bfe;
+      --green:    #00c689;
+      --sw:       260px;
+      --font-d:   'Orbitron', monospace;
+      --font-b:   'Exo 2', sans-serif;
+      --r-sm:     8px;
+      --r-md:     12px;
+      --r-lg:     16px;
+      --r-xl:     24px;
+      --shadow:   0 8px 32px rgba(0,0,0,0.45);
+      --shadow-b: 0 4px 24px rgba(26,111,255,0.35);
+      --tr:       all 0.22s cubic-bezier(0.4,0,0.2,1);
     }
-    if (CUD.banned) { await auth.signOut(); toast("⛔ Akun kamu dibanned."); return; }
-    showApp();
-  } else {
-    CU = null; CUD = null;
-    hideApp();
-  }
-});
 
-// ─── ROLE HELPERS ───────────────────────────
-function roleEntry(username) {
-  if (!username) return null;
-  return TEAM_ROLES[username.toLowerCase()] || null;
-}
-function isAdmin(role) { return ADMIN_ROLES.includes(role); }
-function roleCls(role) {
-  return { founder_owner:"b-owner", cofounder:"b-rajaiblis", ketua:"b-ketua", admin:"b-admin" }[role] || "";
-}
-function roleLabel(username, role) {
-  const e = roleEntry(username);
-  return e ? e.display : null;
-}
-function roleDisp(role) {
-  return { founder_owner:"Founder / Owner", cofounder:"Raja Iblis", ketua:"Ketua", admin:"Admin", member:"Member" }[role] || "Member";
-}
+    /* === Reset & Base === */
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      background: var(--bg-900);
+      color: var(--text-200);
+      font-family: var(--font-b);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content:'';
+      position:fixed; inset:0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(26,111,255,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(0,212,255,0.06) 0%, transparent 60%);
+      pointer-events:none; z-index:0;
+    }
+    a { text-decoration:none; color:inherit; }
+    ul { list-style:none; }
+    img { max-width:100%; border-radius: var(--r-sm); }
+    input, textarea, button { font-family: var(--font-b); }
+    ::-webkit-scrollbar { width:5px; height:5px; }
+    ::-webkit-scrollbar-track { background: var(--bg-800); }
+    ::-webkit-scrollbar-thumb { background: var(--blue); border-radius:99px; }
+    .hidden { display:none !important; }
 
-// ─── AUTH FORMS ─────────────────────────────
-function showReg()   { setForms("registerForm"); }
-function showLogin() { setForms("loginForm"); }
-function setForms(active) {
-  document.querySelectorAll(".auth-form").forEach(f => f.classList.remove("active"));
-  document.getElementById(active).classList.add("active");
-}
+    /* === Loading Screen === */
+    #loading-screen {
+      position:fixed; inset:0;
+      background: var(--bg-900);
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      z-index:9999;
+      gap:24px;
+    }
+    .loader-logo {
+      font-family: var(--font-d);
+      font-size:3rem; font-weight:900;
+      background: var(--grad);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+      animation: pulse-glow 1.5s ease-in-out infinite;
+    }
+    .loader-bar {
+      width:160px; height:3px;
+      background: var(--bg-700);
+      border-radius:99px;
+      overflow:hidden;
+    }
+    .loader-fill {
+      height:100%;
+      background: var(--grad);
+      border-radius:99px;
+      animation: load-fill 1.8s ease-in-out infinite;
+    }
+    @keyframes load-fill {
+      0%   { width:0%; transform:translateX(0); }
+      50%  { width:80%; }
+      100% { width:100%; transform:translateX(5px); opacity:0; }
+    }
+    @keyframes pulse-glow {
+      0%,100% { filter: drop-shadow(0 0 8px rgba(26,111,255,0.5)); }
+      50%      { filter: drop-shadow(0 0 20px rgba(0,212,255,0.8)); }
+    }
 
-async function loginUser() {
-  const email = v("loginEmail"), pw = v("loginPassword");
-  const err = document.getElementById("loginErr");
-  err.textContent = "";
-  if (!email||!pw) { err.textContent="Mohon isi semua kolom."; return; }
-  try { await auth.signInWithEmailAndPassword(email, pw); }
-  catch(e) { err.textContent = authErr(e.code); }
-}
+    /* === Auth Screen === */
+    #auth-screen {
+      position:fixed; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      z-index:100;
+      background: var(--bg-900);
+    }
+    .auth-bg {
+      position:absolute; inset:0;
+      background:
+        radial-gradient(ellipse 70% 50% at 30% 20%, rgba(26,111,255,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 70% at 75% 75%, rgba(0,212,255,0.09) 0%, transparent 60%);
+    }
+    .auth-card {
+      position:relative; z-index:1;
+      width:100%; max-width:420px;
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius: var(--r-xl);
+      padding:40px 36px;
+      backdrop-filter: blur(20px);
+      box-shadow: var(--shadow), 0 0 60px rgba(26,111,255,0.1);
+      animation: slide-up 0.4s ease;
+    }
+    @keyframes slide-up {
+      from { opacity:0; transform:translateY(30px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .auth-logo {
+      text-align:center;
+      margin-bottom:28px;
+    }
+    .auth-logo img {
+      width:72px; height:72px;
+      object-fit:contain;
+      filter: drop-shadow(0 0 16px rgba(26,111,255,0.5));
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+    .auth-logo h1 {
+      font-family: var(--font-d);
+      font-size:1.3rem; font-weight:700;
+      background: var(--grad);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+      margin-top:10px;
+    }
+    .auth-tabs {
+      display:flex;
+      background: var(--bg-700);
+      border-radius: var(--r-md);
+      padding:4px;
+      margin-bottom:24px;
+    }
+    .auth-tab {
+      flex:1; padding:8px;
+      background:transparent;
+      border:none; cursor:pointer;
+      color: var(--text-400);
+      font-family: var(--font-b);
+      font-weight:600; font-size:13px;
+      border-radius: var(--r-sm);
+      transition: var(--tr);
+    }
+    .auth-tab.active {
+      background: var(--grad);
+      color:#fff;
+    }
+    .auth-form { display:flex; flex-direction:column; gap:14px; }
+    .form-group { position:relative; }
+    .form-group i {
+      position:absolute; left:14px; top:50%; transform:translateY(-50%);
+      color: var(--text-400); font-size:14px;
+    }
+    .form-input {
+      width:100%; padding:12px 14px 12px 40px;
+      background: var(--bg-700);
+      border:1px solid var(--border);
+      border-radius: var(--r-md);
+      color: var(--text-100);
+      font-size:14px;
+      transition: var(--tr);
+      outline:none;
+    }
+    .form-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(26,111,255,0.15);
+    }
+    .form-input::placeholder { color: var(--text-600); }
+    .btn-primary {
+      width:100%; padding:13px;
+      background: var(--grad);
+      border:none; border-radius: var(--r-md);
+      color:#fff; font-weight:700;
+      font-size:14px; cursor:pointer;
+      transition: var(--tr);
+      letter-spacing:0.5px;
+    }
+    .btn-primary:hover {
+      transform:translateY(-1px);
+      box-shadow: var(--shadow-b);
+    }
+    .btn-primary:active { transform:translateY(0); }
+    .auth-err {
+      background: rgba(255,71,87,0.15);
+      border:1px solid rgba(255,71,87,0.3);
+      border-radius: var(--r-sm);
+      padding:10px 14px;
+      color: #ff6b7a;
+      font-size:13px;
+    }
 
-async function registerUser() {
-  const username = v("regUsername"), email = v("regEmail"), pw = v("regPassword");
-  const err = document.getElementById("regErr");
-  err.textContent = "";
-  if (!username||!email||!pw) { err.textContent="Mohon isi semua kolom."; return; }
-  if (username.length < 3)    { err.textContent="Username minimal 3 karakter."; return; }
-  if (pw.length < 6)          { err.textContent="Password minimal 6 karakter."; return; }
-  const entry = roleEntry(username);
-  const role  = entry ? entry.role : "member";
-  try {
-    const cred = await auth.createUserWithEmailAndPassword(email, pw);
-    await db.collection("users").doc(cred.user.uid).set({
-      username, email, bio:"", photoURL:"", role,
-      banned:false, postCount:0, likeCount:0, commentCount:0,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  } catch(e) { err.textContent = authErr(e.code); }
-}
+    /* === Main App Layout === */
+    #main-app {
+      display:flex;
+      min-height:100vh;
+      position:relative; z-index:1;
+    }
 
-async function logoutUser() {
-  if (feedUnsub) { feedUnsub(); feedUnsub=null; }
-  if (chatUnsub) { chatUnsub(); chatUnsub=null; }
-  await auth.signOut();
-}
+    /* === Sidebar === */
+    #sidebar {
+      width: var(--sw);
+      background: linear-gradient(180deg, var(--bg-800) 0%, var(--bg-700) 100%);
+      border-right:1px solid var(--border);
+      position:fixed; top:0; left:0; bottom:0;
+      display:flex; flex-direction:column;
+      z-index:100;
+      overflow:hidden;
+    }
+    #sidebar::after {
+      content:'';
+      position:absolute; top:0; left:0; right:0; height:1px;
+      background: var(--grad);
+    }
+    .sb-logo {
+      padding:24px 20px 20px;
+      display:flex; align-items:center; gap:12px;
+      border-bottom:1px solid var(--border);
+    }
+    .sb-logo img {
+      width:44px; height:44px;
+      object-fit:contain;
+      filter: drop-shadow(0 0 10px rgba(26,111,255,0.5));
+    }
+    .sb-logo-text { flex:1; }
+    .sb-logo-text .brand {
+      font-family: var(--font-d);
+      font-size:12px; font-weight:700;
+      background: var(--grad);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+      line-height:1.2;
+    }
+    .sb-logo-text .sub {
+      font-size:10px;
+      color: var(--text-400);
+      letter-spacing:1px;
+      text-transform:uppercase;
+    }
+    .sb-nav {
+      flex:1; padding:16px 12px;
+      display:flex; flex-direction:column;
+      gap:4px;
+      overflow-y:auto;
+    }
+    .sb-item {
+      display:flex; align-items:center; gap:12px;
+      padding:11px 14px;
+      border-radius: var(--r-md);
+      cursor:pointer;
+      color: var(--text-400);
+      font-weight:500;
+      transition: var(--tr);
+      user-select:none;
+      position:relative;
+      overflow:hidden;
+    }
+    .sb-item::before {
+      content:'';
+      position:absolute; inset:0;
+      background: var(--grad);
+      opacity:0;
+      transition: var(--tr);
+      border-radius: var(--r-md);
+    }
+    .sb-item:hover::before { opacity:0.08; }
+    .sb-item.active::before { opacity:1; }
+    .sb-item.active {
+      color:#fff;
+      box-shadow: var(--shadow-b);
+    }
+    .sb-item i {
+      width:18px; text-align:center;
+      font-size:15px;
+      position:relative; z-index:1;
+    }
+    .sb-item span {
+      font-size:13.5px;
+      position:relative; z-index:1;
+    }
+    .sb-footer {
+      padding:14px 12px;
+      border-top:1px solid var(--border);
+      display:flex; align-items:center; gap:10px;
+    }
+    .sb-user-info { flex:1; overflow:hidden; }
+    .sb-username {
+      font-weight:600; font-size:13px;
+      color: var(--text-100);
+      display:block;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .sb-role { font-size:11px; margin-top:1px; }
+    .btn-logout {
+      width:34px; height:34px;
+      background: rgba(255,71,87,0.1);
+      border:1px solid rgba(255,71,87,0.2);
+      border-radius: var(--r-sm);
+      color: #ff6b7a;
+      cursor:pointer;
+      font-size:14px;
+      display:flex; align-items:center; justify-content:center;
+      transition: var(--tr);
+      flex-shrink:0;
+    }
+    .btn-logout:hover {
+      background: rgba(255,71,87,0.2);
+      border-color: rgba(255,71,87,0.4);
+    }
 
-function authErr(code) {
-  return {
-    "auth/user-not-found":       "Akun tidak ditemukan.",
-    "auth/wrong-password":       "Password salah.",
-    "auth/email-already-in-use": "Email sudah terdaftar.",
-    "auth/invalid-email":        "Format email tidak valid.",
-    "auth/too-many-requests":    "Terlalu banyak percobaan, coba lagi nanti.",
-    "auth/invalid-credential":   "Email atau password salah.",
-    "auth/weak-password":        "Password terlalu lemah.",
-  }[code] || "Terjadi kesalahan, coba lagi.";
-}
+    /* === Avatar === */
+    .avatar {
+      width:38px; height:38px;
+      border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-family: var(--font-d);
+      font-weight:700; font-size:13px;
+      color:#fff;
+      flex-shrink:0;
+      overflow:hidden;
+      border:2px solid var(--border-b);
+      background: var(--grad);
+    }
+    .avatar img { width:100%; height:100%; object-fit:cover; }
+    .avatar-lg {
+      width:80px; height:80px;
+      border-width:3px;
+      font-size:24px;
+    }
+    .avatar-xl {
+      width:100px; height:100px;
+      border-width:3px;
+      font-size:28px;
+    }
 
-// ─── SHOW / HIDE APP ────────────────────────
-async function showApp() {
-  document.getElementById("authOverlay").classList.add("hidden");
-  document.getElementById("mainApp").classList.remove("hidden");
-  await initApp();
-}
-function hideApp() {
-  document.getElementById("authOverlay").classList.remove("hidden");
-  document.getElementById("mainApp").classList.add("hidden");
-  setForms("loginForm");
-}
+    /* === Badges === */
+    .badge {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:2px 8px;
+      border-radius:99px;
+      font-size:10px; font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:0.5px;
+    }
+    .badge-owner   { background:rgba(255,215,0,0.15);  color:var(--gold);   border:1px solid rgba(255,215,0,0.3); }
+    .badge-raja    { background:rgba(255,71,87,0.15);   color:#ff6b7a;       border:1px solid rgba(255,71,87,0.3); }
+    .badge-ketua   { background:rgba(162,155,254,0.15); color:var(--purple); border:1px solid rgba(162,155,254,0.3); }
+    .badge-admin   { background:rgba(0,212,255,0.12);   color:var(--cyan);   border:1px solid rgba(0,212,255,0.25); }
+    .badge-member  { background:rgba(122,138,168,0.1);  color:var(--text-400); border:1px solid var(--border); }
 
-async function initApp() {
-  // 1. Sync role dari TEAM_ROLES → Firestore
-  await syncRole();
-  // 2. Update UI dengan data terbaru
-  updateUI();
-  // 3. Tampilkan admin nav jika perlu
-  refreshAdminNav();
-  // 4. Load data
-  loadFeed();
-  loadTeamStructure();
-  loadStats();
-}
+    /* === Main Content === */
+    #main-content {
+      margin-left: var(--sw);
+      flex:1;
+      min-height:100vh;
+      padding:0 0 60px;
+    }
+    .panel {
+      max-width:700px;
+      margin:0 auto;
+      padding:24px 20px;
+      display:flex; flex-direction:column; gap:16px;
+    }
 
-// ─── SYNC ROLE ──────────────────────────────
-async function syncRole() {
-  if (!CU || !CUD) return;
-  const entry = roleEntry(CUD.username);
-  if (entry && entry.role !== CUD.role) {
-    try {
-      await db.collection("users").doc(CU.uid).update({ role: entry.role });
-      CUD.role = entry.role;
-      console.log(`✅ Role synced: ${CUD.username} → ${entry.role}`);
-    } catch(e) { console.error("syncRole:", e); }
-  }
-}
+    /* === Welcome Banner === */
+    .welcome-banner {
+      background: linear-gradient(135deg,
+        rgba(26,111,255,0.2) 0%,
+        rgba(0,212,255,0.12) 50%,
+        rgba(26,111,255,0.08) 100%);
+      border:1px solid var(--border-b);
+      border-radius: var(--r-xl);
+      padding:28px 28px;
+      display:flex; align-items:center; gap:20px;
+      position:relative; overflow:hidden;
+      backdrop-filter: blur(10px);
+    }
+    .welcome-banner::before {
+      content:'';
+      position:absolute;
+      top:-40px; right:-40px;
+      width:200px; height:200px;
+      background: radial-gradient(circle, rgba(0,212,255,0.1) 0%, transparent 60%);
+      border-radius:50%;
+    }
+    .banner-logo {
+      width:70px; height:70px;
+      object-fit:contain;
+      filter: drop-shadow(0 0 20px rgba(26,111,255,0.6));
+      flex-shrink:0;
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+    .banner-text { position:relative; z-index:1; }
+    .banner-text h1 {
+      font-family: var(--font-d);
+      font-size:1.5rem; font-weight:900;
+      background: var(--grad);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+      line-height:1.2;
+    }
+    .banner-text p {
+      color: var(--text-400);
+      margin-top:6px; font-size:13px;
+    }
+    .banner-text .online-count {
+      display:inline-flex; align-items:center; gap:6px;
+      margin-top:8px;
+      font-size:12px; color: var(--text-400);
+    }
+    .online-dot {
+      width:7px; height:7px;
+      background: var(--green);
+      border-radius:50%;
+      animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%,100% { opacity:1; }
+      50%      { opacity:0.3; }
+    }
 
-function refreshAdminNav() {
-  const show = isAdmin(CUD?.role);
-  ["sbAdminLink","mobAdminBtn"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.classList.toggle("hidden", !show); el.classList.toggle("admin-only", show); }
-  });
-}
+    /* === Card === */
+    .card {
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius: var(--r-lg);
+      backdrop-filter: blur(12px);
+      transition: var(--tr);
+    }
+    .card:hover { border-color: rgba(26,111,255,0.2); }
 
-function updateUI() {
-  const ava  = CUD?.photoURL || genAva(CUD?.username||"N");
-  const name = CUD?.username || "User";
-  const role = roleDisp(CUD?.role||"member");
-  setAva("sbAva", ava, name);
-  setAva("composerAva", ava, name);
-  setAva("commentAva", ava, name);
-  setText("sbName", name);
-  setText("sbRole", role);
-  if (isAdmin(CUD?.role)) setAva("adminChatAva", ava, name);
-}
+    /* === Create Post === */
+    .create-post { padding:18px; }
+    .create-post-head {
+      display:flex; gap:12px; align-items:flex-start;
+    }
+    .create-post-head textarea {
+      flex:1;
+      background: var(--bg-700);
+      border:1px solid var(--border);
+      border-radius: var(--r-md);
+      color: var(--text-100);
+      padding:12px 14px;
+      font-size:14px;
+      resize:none;
+      outline:none;
+      min-height:70px;
+      transition: var(--tr);
+    }
+    .create-post-head textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(26,111,255,0.12);
+    }
+    .create-post-head textarea::placeholder { color: var(--text-600); }
+    .create-post-foot {
+      margin-top:12px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .btn-attach {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:8px 14px;
+      background: var(--bg-700);
+      border:1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text-400);
+      cursor:pointer;
+      font-size:13px;
+      transition: var(--tr);
+    }
+    .btn-attach:hover {
+      border-color: var(--blue);
+      color: var(--blue-lt);
+    }
+    .post-img-preview-wrap {
+      position:relative;
+      display:inline-block;
+      margin-top:10px;
+    }
+    .post-img-preview-wrap img {
+      max-height:200px;
+      border-radius: var(--r-md);
+      border:1px solid var(--border-b);
+    }
+    .btn-remove-img {
+      position:absolute; top:-8px; right:-8px;
+      width:22px; height:22px;
+      background: var(--red);
+      border:none; border-radius:50%;
+      color:#fff; font-size:10px;
+      cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .btn-post {
+      margin-left:auto;
+      padding:9px 22px;
+      background: var(--grad);
+      border:none; border-radius: var(--r-sm);
+      color:#fff; font-weight:700;
+      font-size:13px; cursor:pointer;
+      transition: var(--tr);
+    }
+    .btn-post:hover {
+      transform:translateY(-1px);
+      box-shadow: var(--shadow-b);
+    }
+    .btn-post:disabled {
+      opacity:0.5; cursor:not-allowed;
+      transform:none; box-shadow:none;
+    }
 
-// ─── PAGE NAVIGATION ────────────────────────
-function navTo(name, el) {
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  const pg = document.getElementById("page-"+name);
-  if (pg) pg.classList.add("active");
+    /* === Post Card === */
+    .post-card {
+      animation: fade-in 0.3s ease;
+    }
+    @keyframes fade-in {
+      from { opacity:0; transform:translateY(8px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .post-head {
+      display:flex; align-items:flex-start; gap:10px;
+      padding:16px 16px 0;
+    }
+    .post-meta { flex:1; }
+    .post-author-row {
+      display:flex; align-items:center; gap:8px;
+      flex-wrap:wrap;
+    }
+    .post-author {
+      font-weight:700; font-size:14px;
+      color: var(--text-100);
+    }
+    .post-time {
+      font-size:12px;
+      color: var(--text-600);
+      margin-top:2px;
+    }
+    .btn-post-menu {
+      background:none; border:none;
+      color: var(--text-400);
+      cursor:pointer; padding:4px 8px;
+      border-radius: var(--r-sm);
+      font-size:16px;
+      transition: var(--tr);
+    }
+    .btn-post-menu:hover { background: var(--bg-700); color: var(--text-200); }
+    .post-body {
+      padding:12px 16px;
+      color: var(--text-200);
+      font-size:14px;
+      line-height:1.7;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .post-image {
+      padding:0 16px 12px;
+    }
+    .post-image img {
+      width:100%;
+      border-radius: var(--r-md);
+      border:1px solid var(--border);
+      cursor:pointer;
+      transition: var(--tr);
+    }
+    .post-image img:hover { opacity:0.9; }
+    .post-footer {
+      display:flex; align-items:center; gap:4px;
+      padding:8px 12px 12px;
+      border-top:1px solid var(--border);
+    }
+    .btn-action {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:7px 12px;
+      background:none;
+      border:none; border-radius: var(--r-sm);
+      color: var(--text-400);
+      cursor:pointer;
+      font-size:13px;
+      transition: var(--tr);
+    }
+    .btn-action:hover { background: var(--bg-700); color: var(--text-200); }
+    .btn-action.liked { color: #ff6b7a; }
+    .btn-action.liked i { animation: pop 0.25s ease; }
+    @keyframes pop {
+      0%   { transform:scale(1); }
+      50%  { transform:scale(1.4); }
+      100% { transform:scale(1); }
+    }
+    .btn-del-post {
+      margin-left:auto;
+      background:none; border:none;
+      color: var(--text-600);
+      cursor:pointer; padding:7px;
+      border-radius: var(--r-sm);
+      font-size:13px;
+      transition: var(--tr);
+    }
+    .btn-del-post:hover { color: var(--red); background: rgba(255,71,87,0.1); }
 
-  document.querySelectorAll(".sni,.mbn").forEach(i => i.classList.remove("active"));
-  if (el) {
-    const nav = el.closest?.(".sni,.mbn") || el;
-    if (nav) nav.classList.add("active");
-  }
+    /* === Comments === */
+    .comments-section {
+      border-top:1px solid var(--border);
+      padding:12px 16px;
+    }
+    .comment-list { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+    .comment-item {
+      display:flex; gap:8px;
+    }
+    .comment-bubble {
+      flex:1;
+      background: var(--bg-700);
+      border-radius: var(--r-md);
+      padding:8px 12px;
+    }
+    .comment-author-row {
+      display:flex; align-items:center; gap:6px;
+      margin-bottom:3px;
+    }
+    .comment-author { font-weight:600; font-size:12px; color: var(--text-100); }
+    .comment-time { font-size:11px; color: var(--text-600); }
+    .comment-text { font-size:13px; color: var(--text-200); word-break:break-word; }
+    .comment-input-row {
+      display:flex; gap:8px; align-items:center;
+    }
+    .comment-input {
+      flex:1;
+      background: var(--bg-700);
+      border:1px solid var(--border);
+      border-radius: var(--r-md);
+      padding:8px 12px;
+      color: var(--text-100);
+      font-size:13px;
+      outline:none;
+      transition: var(--tr);
+    }
+    .comment-input:focus { border-color: var(--blue); }
+    .comment-input::placeholder { color: var(--text-600); }
+    .btn-send-comment {
+      width:34px; height:34px;
+      background: var(--grad);
+      border:none; border-radius: var(--r-sm);
+      color:#fff; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      font-size:13px;
+      transition: var(--tr);
+      flex-shrink:0;
+    }
+    .btn-send-comment:hover { transform:scale(1.05); box-shadow: var(--shadow-b); }
+    .comments-loading {
+      text-align:center; color: var(--text-600);
+      font-size:12px; padding:8px;
+    }
+    .no-comments {
+      text-align:center; color: var(--text-600);
+      font-size:12px; padding:8px;
+    }
 
-  if (name === "profile")     loadProfile();
-  if (name === "explore")     loadExploreFeed();
-  if (name === "leaderboard") loadLeaderboard();
-  if (name === "admin" && isAdmin(CUD?.role)) loadAdminChat();
-}
+    /* === Feed Loading / Empty === */
+    .feed-status {
+      text-align:center;
+      padding:48px 20px;
+      color: var(--text-400);
+    }
+    .feed-status i { font-size:2.5rem; margin-bottom:12px; display:block; color: var(--text-600); }
+    .feed-status p { font-size:14px; }
+    .load-more-wrap { text-align:center; padding:8px; }
+    .btn-load-more {
+      padding:10px 28px;
+      background: var(--bg-700);
+      border:1px solid var(--border-b);
+      border-radius: var(--r-md);
+      color: var(--blue-lt);
+      cursor:pointer;
+      font-weight:600; font-size:13px;
+      transition: var(--tr);
+    }
+    .btn-load-more:hover { background: var(--bg-600); }
 
-// ─── TEAM STRUCTURE ─────────────────────────
-async function loadTeamStructure() {
-  const el = document.getElementById("teamStructure");
-  if (!el) return;
-  try {
-    const snap = await db.collection("users").get();
-    const users = [];
-    snap.forEach(d => users.push({ id: d.id, ...d.data() }));
+    /* === Panel Header === */
+    .panel-header {
+      padding-bottom:4px;
+    }
+    .panel-header h2 {
+      font-family: var(--font-d);
+      font-size:1.15rem; font-weight:700;
+      color: var(--text-100);
+      display:flex; align-items:center; gap:10px;
+    }
+    .panel-header h2 i { color: var(--blue-lt); }
+    .panel-header p { color: var(--text-400); font-size:13px; margin-top:4px; }
+    .section-title {
+      font-family: var(--font-d);
+      font-size:0.85rem; font-weight:700;
+      color: var(--text-400);
+      text-transform:uppercase; letter-spacing:1px;
+      display:flex; align-items:center; gap:8px;
+      padding-bottom:8px;
+      border-bottom:1px solid var(--border);
+    }
 
-    // Kelompokkan per divisi
-    const groups = {};
-    ["founder_owner","cofounder","ketua","admin"].forEach(k => groups[k] = []);
-    Object.entries(TEAM_ROLES).forEach(([uname, cfg]) => {
-      const found = users.find(u => u.username?.toLowerCase() === uname);
-      groups[cfg.divisi]?.push({
-        username: found?.username || uname,
-        ava: found?.photoURL || genAva(found?.username || uname),
-        cfg
-      });
-    });
+    /* === Links Panel === */
+    .link-card {
+      display:flex; align-items:center; gap:14px;
+      padding:18px 20px;
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius: var(--r-lg);
+      cursor:pointer;
+      transition: var(--tr);
+      text-decoration:none;
+    }
+    .link-card:hover {
+      transform:translateY(-2px);
+      border-color: var(--border-b);
+      box-shadow: var(--shadow-b);
+    }
+    .link-icon {
+      width:48px; height:48px;
+      border-radius: var(--r-md);
+      display:flex; align-items:center; justify-content:center;
+      font-size:22px;
+      flex-shrink:0;
+    }
+    .link-icon.discord { background:rgba(88,101,242,0.2); color:#7289da; }
+    .link-icon.tiktok  { background:rgba(0,0,0,0.3); color: var(--text-100); }
+    .link-icon.roblox  { background:rgba(26,111,255,0.15); color: var(--blue-lt); }
+    .link-info { flex:1; }
+    .link-info h3 { font-weight:700; font-size:14px; color: var(--text-100); }
+    .link-info p  { font-size:12px; color: var(--text-400); margin-top:2px; }
+    .link-arrow { color: var(--text-600); font-size:13px; flex-shrink:0; }
 
-    el.innerHTML = "";
-    const order = ["founder_owner","rajaiblis","ketua","admin"];
-    let first = true;
-    order.forEach(key => {
-      const grp = groups[key];
-      if (!grp?.length) return;
-      const info = DIVISI_INFO[key];
-      if (!first) {
-        const conn = document.createElement("div");
-        conn.className = "org-connector";
-        el.appendChild(conn);
-      }
-      first = false;
-      const sec = document.createElement("div");
-      sec.className = "org-sec";
-      sec.style.borderColor = info.border;
-      sec.innerHTML = `
-        <div class="org-sec-hdr" style="color:${info.color}">
-          <span class="org-icon">${info.icon}</span>
-          <span>${info.label.toUpperCase()}</span>
-        </div>
-        <div class="org-mbrs" id="orgd-${key}"></div>`;
-      el.appendChild(sec);
-      const mbrs = sec.querySelector(`#orgd-${key}`);
-      grp.forEach(m => {
-        const row = document.createElement("div");
-        row.className = "org-row";
-        row.innerHTML = `
-          <img class="org-ava" src="${esc(m.ava)}" alt="" onerror="this.src='${genAva(m.username)}'" />
-          <span class="org-mname">${esc(m.username)}</span>
-          <span class="org-mtag" style="color:${info.color};border-color:${info.border};background:${info.bg}">${m.cfg.display}</span>`;
-        mbrs.appendChild(row);
-      });
-    });
-  } catch(e) {
-    el.innerHTML = '<p style="text-align:center;padding:20px;color:var(--muted);font-size:.8rem;">Gagal memuat struktur tim.</p>';
-    console.error("loadTeamStructure:", e);
-  }
-}
+    /* === Founders Panel === */
+    .founders-tier {
+      display:flex; flex-direction:column; gap:12px;
+    }
+    .tier-label {
+      display:flex; align-items:center; gap:10px;
+      padding:8px 0;
+    }
+    .tier-label-line {
+      flex:1; height:1px;
+      background: var(--border);
+    }
+    .tier-label-text {
+      font-family: var(--font-d);
+      font-size:10px; font-weight:700;
+      text-transform:uppercase; letter-spacing:1.5px;
+      white-space:nowrap;
+    }
+    .founders-grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap:12px;
+    }
+    .founder-card {
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding:18px;
+      display:flex; flex-direction:column; align-items:center;
+      text-align:center;
+      gap:10px;
+      transition: var(--tr);
+    }
+    .founder-card:hover {
+      border-color: var(--border-b);
+      transform:translateY(-2px);
+      box-shadow: var(--shadow-b);
+    }
+    .founder-name {
+      font-weight:700; font-size:14px;
+      color: var(--text-100);
+    }
+    .founder-username {
+      font-size:12px; color: var(--text-400);
+      margin-top:2px;
+    }
+    .founder-desc {
+      font-size:12px; color: var(--text-400);
+    }
 
-// ─── LEADERBOARD ────────────────────────────
-async function loadLeaderboard() {
-  const el = document.getElementById("lbList");
-  el.innerHTML = '<div class="loader-wrap"><div class="ngc-spinner"></div></div>';
-  try {
-    const snap = await db.collection("users").get();
-    const users = [];
-    snap.forEach(d => {
-      const ud = d.data();
-      const score = (ud.postCount||0)*SCORE.post + (ud.likeCount||0)*SCORE.like + (ud.commentCount||0)*SCORE.comment;
-      users.push({ id: d.id, ...ud, score });
-    });
-    users.sort((a,b) => {
-      const aE = roleEntry(a.username), bE = roleEntry(b.username);
-      const aO = aE ? aE.order : 99, bO = bE ? bE.order : 99;
-      return aO !== bO ? aO - bO : b.score - a.score;
-    });
-    el.innerHTML = `
-      <div class="lb-hdr-row">
-        <div class="lbh-rank">#</div><div class="lbh-ava"></div>
-        <div class="lbh-info">ANGGOTA</div><div class="lbh-score">SKOR</div>
-      </div>`;
-    users.forEach((u, i) => {
-      const rank = i+1;
-      const rc   = rank===1?"r1":rank===2?"r2":rank===3?"r3":"rn";
-      const entry= roleEntry(u.username);
-      const rCls = roleCls(u.role||"member");
-      const rLbl = entry ? entry.display : roleDisp(u.role||"member");
-      const icon = entry?.icon || "";
-      const ava  = u.photoURL || genAva(u.username||"N");
-      const isMe = u.id === CU?.uid;
-      const row  = document.createElement("div");
-      row.className = `lb-row${rank<=3?" rank-"+rank:""}`;
-      row.innerHTML = `
-        <div class="lb-rn ${rc}">${rank<=3?["🥇","🥈","🥉"][rank-1]:rank}</div>
-        <div class="lb-aw">
-          <img class="lb-ava" src="${esc(ava)}" alt="" onerror="this.src='${genAva(u.username||"N")}'" />
-          ${rank===1?'<span class="lb-crown">👑</span>':""}
-        </div>
-        <div class="lb-info">
-          <div class="lb-name">${esc(u.username)}${isMe?'<span class="lb-you">KAMU</span>':""}</div>
-          ${rCls?`<span class="lb-rbadge ${rCls}">${icon} ${rLbl}</span>`:""}
-        </div>
-        <div class="lb-sb"><div class="lb-snum">${u.score}</div><div class="lb-slbl">POIN</div></div>`;
-      el.appendChild(row);
-    });
-  } catch(e) {
-    el.innerHTML = '<p style="text-align:center;padding:44px;color:var(--muted);">Gagal memuat leaderboard.</p>';
-    console.error("loadLeaderboard:", e);
-  }
-}
+    /* === Profile Panel === */
+    .profile-cover {
+      height:140px;
+      background: linear-gradient(135deg,
+        rgba(26,111,255,0.3) 0%,
+        rgba(0,212,255,0.2) 50%,
+        rgba(26,111,255,0.1) 100%);
+      border-radius: var(--r-xl) var(--r-xl) 0 0;
+      border:1px solid var(--border-b);
+      border-bottom:none;
+      position:relative;
+      overflow:hidden;
+    }
+    .profile-cover::before {
+      content:'';
+      position:absolute; inset:0;
+      background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0L40 40M40 0L0 40' stroke='rgba(26,111,255,0.08)' stroke-width='1'/%3E%3C/svg%3E");
+    }
+    .profile-card {
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius: var(--r-xl);
+      overflow:hidden;
+      backdrop-filter: blur(12px);
+    }
+    .profile-info {
+      padding:0 24px 20px;
+      text-align:center;
+    }
+    .profile-avatar-wrap {
+      margin-top:-40px;
+      margin-bottom:12px;
+      display:flex; justify-content:center;
+    }
+    .profile-avatar {
+      width:80px; height:80px;
+      border-radius:50%;
+      border:3px solid var(--bg-800);
+      overflow:hidden;
+      cursor:pointer;
+      position:relative;
+      box-shadow: var(--shadow-b);
+    }
+    .profile-avatar img, .profile-avatar .av-init {
+      width:100%; height:100%;
+      object-fit:cover;
+    }
+    .profile-avatar .av-init {
+      display:flex; align-items:center; justify-content:center;
+      background: var(--grad);
+      font-family: var(--font-d);
+      font-weight:700; font-size:26px;
+      color:#fff;
+    }
+    .profile-avatar-overlay {
+      position:absolute; inset:0;
+      background: rgba(0,0,0,0.5);
+      display:flex; align-items:center; justify-content:center;
+      opacity:0; transition: var(--tr);
+      color:#fff; font-size:18px;
+    }
+    .profile-avatar:hover .profile-avatar-overlay { opacity:1; }
+    .profile-name {
+      font-family: var(--font-d);
+      font-size:1.1rem; font-weight:700;
+      color: var(--text-100);
+    }
+    .profile-badge-wrap { margin:6px 0; }
+    .profile-bio {
+      color: var(--text-400);
+      font-size:13px;
+      margin:8px 0;
+      min-height:20px;
+    }
+    .profile-edit-section {
+      background: var(--bg-700);
+      border-radius: var(--r-lg);
+      padding:16px;
+      margin:0 20px 20px;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .profile-edit-label {
+      font-size:12px; font-weight:600;
+      color: var(--text-400);
+      text-transform:uppercase; letter-spacing:0.5px;
+      margin-bottom:4px;
+    }
+    .profile-bio-input {
+      width:100%;
+      background: var(--bg-600);
+      border:1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text-100);
+      padding:10px 12px;
+      font-size:13px; font-family: var(--font-b);
+      resize:none; outline:none;
+      transition: var(--tr);
+    }
+    .profile-bio-input:focus { border-color: var(--blue); }
+    .btn-save {
+      align-self:flex-end;
+      padding:9px 20px;
+      background: var(--grad);
+      border:none; border-radius: var(--r-sm);
+      color:#fff; font-weight:700;
+      font-size:13px; cursor:pointer;
+      transition: var(--tr);
+    }
+    .btn-save:hover { box-shadow: var(--shadow-b); }
+    .profile-posts-header {
+      padding:0 20px 12px;
+      font-family: var(--font-d);
+      font-size:11px; font-weight:700;
+      text-transform:uppercase; letter-spacing:1px;
+      color: var(--text-400);
+      display:flex; align-items:center; gap:8px;
+      border-top:1px solid var(--border);
+      padding-top:16px;
+    }
+    .profile-posts { padding:0 16px 16px; display:flex; flex-direction:column; gap:10px; }
 
-// ─── STATS ──────────────────────────────────
-async function loadStats() {
-  try {
-    const [u, p] = await Promise.all([db.collection("users").get(), db.collection("posts").get()]);
-    setText("statMembers", u.size); setText("statPosts", p.size);
-    setText("wh-members", u.size);  setText("wh-posts", p.size);
-  } catch(e) { console.error("loadStats:", e); }
-}
+    /* === Image Modal === */
+    #img-modal {
+      position:fixed; inset:0;
+      background: rgba(0,0,0,0.9);
+      z-index:9999;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+      animation: fade-in 0.15s ease;
+    }
+    #img-modal img {
+      max-width:90vw; max-height:90vh;
+      border-radius: var(--r-lg);
+      object-fit:contain;
+    }
+    #img-modal-close {
+      position:absolute; top:20px; right:20px;
+      width:40px; height:40px;
+      background: var(--bg-700);
+      border:none; border-radius:50%;
+      color:#fff; font-size:18px;
+      cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+    }
 
-// ─── FEED ───────────────────────────────────
-function loadFeed() {
-  const el = document.getElementById("postFeed");
-  el.innerHTML = '<div class="loader-wrap"><div class="ngc-spinner"></div></div>';
-  if (feedUnsub) feedUnsub();
-  feedUnsub = db.collection("posts").orderBy("createdAt","desc").limit(30)
-    .onSnapshot(async snap => {
-      if (snap.empty) {
-        el.innerHTML = '<p style="text-align:center;color:var(--muted);padding:48px 0;font-family:Rajdhani,sans-serif;letter-spacing:.1em;font-size:.82rem;">BELUM ADA POSTINGAN. JADILAH YANG PERTAMA!</p>';
-        return;
-      }
-      el.innerHTML = "";
-      for (const doc of snap.docs) el.appendChild(await buildPost(doc.id, doc.data()));
-    }, err => {
-      el.innerHTML = '<p style="text-align:center;color:var(--muted);padding:48px 0;">Gagal memuat postingan.</p>';
-      console.error("loadFeed:", err);
-    });
-}
+    /* === Toast === */
+    #toast-container {
+      position:fixed; bottom:24px; right:24px;
+      z-index:9999;
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .toast {
+      display:flex; align-items:center; gap:10px;
+      padding:12px 18px;
+      background: var(--bg-700);
+      border:1px solid var(--border);
+      border-radius: var(--r-md);
+      font-size:13px; font-weight:500;
+      color: var(--text-100);
+      box-shadow: var(--shadow);
+      animation: toast-in 0.3s ease;
+      min-width:220px;
+    }
+    .toast.success { border-color: rgba(0,198,137,0.4); }
+    .toast.success i { color: var(--green); }
+    .toast.error { border-color: rgba(255,71,87,0.4); }
+    .toast.error i { color: var(--red); }
+    .toast.info i { color: var(--blue-lt); }
+    @keyframes toast-in {
+      from { opacity:0; transform:translateX(20px); }
+      to   { opacity:1; transform:translateX(0); }
+    }
 
-function loadExploreFeed() {
-  const el = document.getElementById("exploreFeed");
-  el.innerHTML = '<div class="loader-wrap"><div class="ngc-spinner"></div></div>';
-  db.collection("posts").orderBy("createdAt","desc").limit(50).get()
-    .then(async snap => {
-      if (snap.empty) { el.innerHTML='<p style="text-align:center;color:var(--muted);padding:48px 0;">Belum ada postingan.</p>'; return; }
-      el.innerHTML = "";
-      for (const doc of snap.docs) el.appendChild(await buildPost(doc.id, doc.data()));
-    }).catch(e => { el.innerHTML='<p style="text-align:center;color:var(--muted);padding:48px 0;">Gagal memuat.</p>'; console.error(e); });
-}
+    /* === Mobile Nav === */
+    #mobile-nav {
+      display:none;
+      position:fixed; bottom:0; left:0; right:0;
+      background: var(--bg-800);
+      border-top:1px solid var(--border);
+      z-index:200;
+      padding:8px 0 env(safe-area-inset-bottom, 8px);
+    }
+    .mob-nav-inner {
+      display:flex; justify-content:space-around;
+    }
+    .mob-nav-item {
+      flex:1;
+      display:flex; flex-direction:column; align-items:center;
+      gap:3px;
+      padding:6px;
+      color: var(--text-600);
+      cursor:pointer;
+      font-size:18px;
+      transition: var(--tr);
+    }
+    .mob-nav-item span { font-size:9px; letter-spacing:0.3px; }
+    .mob-nav-item.active { color: var(--blue-lt); }
 
-// ─── BUILD POST ─────────────────────────────
-async function buildPost(pid, data) {
-  const card = document.createElement("div");
-  card.className = "post-card"; card.id = "post-"+pid;
+    /* === Spinner === */
+    .spin { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
 
-  const name  = data.username || "User";
-  const ava   = data.photoURL  || genAva(name);
-  const role  = data.authorRole || "member";
-  const lc    = data.likeCount    || 0;
-  const cc    = data.commentCount || 0;
-  const time  = data.createdAt ? fmt(data.createdAt.toDate()) : "Baru saja";
-  const mine  = data.authorId === CU?.uid;
-  const admin = isAdmin(CUD?.role);
-  const bCls  = roleCls(role);
-  const bLbl  = roleLabel(name, role);
-  const badge = (bCls && bLbl) ? `<span class="post-badge ${bCls}">${bLbl}</span>` : "";
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      #sidebar { display:none; }
+      #main-content { margin-left:0; padding-bottom:80px; }
+      #mobile-nav { display:block; }
+      .panel { padding:16px 12px; }
+      .welcome-banner { flex-direction:column; text-align:center; padding:24px 18px; }
+      .banner-logo { width:56px; height:56px; }
+      .banner-text h1 { font-size:1.2rem; }
+      .founders-grid { grid-template-columns:1fr; }
+    }
 
-  let liked = false;
-  try {
-    const ld = await db.collection("posts").doc(pid).collection("likes").doc(CU.uid).get();
-    liked = ld.exists;
-  } catch(e) {}
+    /* === Divider === */
+    .divider {
+      height:1px; background: var(--border);
+      margin:4px 0;
+    }
+  </style>
+</head>
+<body>
 
-  card.innerHTML = `
-    <div class="post-hdr">
-      <img class="ava-md" src="${esc(ava)}" alt="" onerror="this.src='${genAva(name)}'" />
-      <div class="post-aw">
-        <div class="post-name-row">
-          <span class="post-name">${esc(name)}</span>${badge}
-        </div>
-        <div class="post-time">${time}</div>
+<!-- =========== LOADING SCREEN =========== -->
+<div id="loading-screen">
+  <div class="loader-logo">NGC</div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+</div>
+
+<!-- =========== AUTH SCREEN =========== -->
+<div id="auth-screen" class="hidden">
+  <div class="auth-bg"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <img src="logo.png" alt="NGC" onerror="this.style.display='none'">
+      <h1>NextGen Collective</h1>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Masuk</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Daftar</button>
+    </div>
+    <!-- Login -->
+    <div id="form-login" class="auth-form">
+      <div class="form-group"><i class="fas fa-envelope"></i>
+        <input type="email" id="login-email" class="form-input" placeholder="Email">
       </div>
-      <div class="post-menu">
-        <button class="post-menu-btn" onclick="toggleMenu('${pid}')">···</button>
-        <div class="post-dd hidden" id="menu-${pid}">
-          <button onclick="sharePost('${pid}');closeMenu('${pid}')">
-            <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-            Bagikan
+      <div class="form-group"><i class="fas fa-lock"></i>
+        <input type="password" id="login-password" class="form-input" placeholder="Password" onkeydown="if(event.key==='Enter')handleLogin()">
+      </div>
+      <div id="login-err" class="auth-err hidden"></div>
+      <button class="btn-primary" onclick="handleLogin()">
+        <i class="fas fa-sign-in-alt"></i> Masuk
+      </button>
+    </div>
+    <!-- Register -->
+    <div id="form-register" class="auth-form hidden">
+      <div class="form-group"><i class="fas fa-user"></i>
+        <input type="text" id="reg-username" class="form-input" placeholder="Username (tanpa spasi)">
+      </div>
+      <div class="form-group"><i class="fas fa-envelope"></i>
+        <input type="email" id="reg-email" class="form-input" placeholder="Email">
+      </div>
+      <div class="form-group"><i class="fas fa-lock"></i>
+        <input type="password" id="reg-password" class="form-input" placeholder="Password (min 6 karakter)" onkeydown="if(event.key==='Enter')handleRegister()">
+      </div>
+      <div id="reg-err" class="auth-err hidden"></div>
+      <button class="btn-primary" onclick="handleRegister()">
+        <i class="fas fa-user-plus"></i> Daftar Sekarang
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- =========== MAIN APP =========== -->
+<div id="main-app" class="hidden">
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sb-logo">
+      <img src="logo.png" alt="NGC" onerror="this.style.display='none'">
+      <div class="sb-logo-text">
+        <div class="brand">NextGen<br>Collective</div>
+        <div class="sub">Community</div>
+      </div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-item active" data-panel="home" onclick="showPanel('home')">
+        <i class="fas fa-home"></i><span>Beranda</span>
+      </div>
+      <div class="sb-item" data-panel="links" onclick="showPanel('links')">
+        <i class="fas fa-link"></i><span>Links</span>
+      </div>
+      <div class="sb-item" data-panel="founders" onclick="showPanel('founders')">
+        <i class="fas fa-crown"></i><span>Pendiri</span>
+      </div>
+      <div class="sb-item" data-panel="profile" onclick="showPanel('profile')">
+        <i class="fas fa-user"></i><span>Profil Saya</span>
+      </div>
+    </nav>
+    <div class="sb-footer">
+      <div id="sb-avatar" class="avatar"></div>
+      <div class="sb-user-info">
+        <span id="sb-username" class="sb-username"></span>
+        <div id="sb-badge" class="sb-role"></div>
+      </div>
+      <button class="btn-logout" onclick="handleLogout()" title="Keluar">
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main id="main-content">
+
+    <!-- HOME PANEL -->
+    <div id="panel-home" class="panel">
+      <div class="welcome-banner">
+        <img src="logo.png" alt="NGC" class="banner-logo" onerror="this.style.display='none'">
+        <div class="banner-text">
+          <h1>NextGen Collective</h1>
+          <p id="welcome-msg">Selamat datang di komunitas kami 🎮</p>
+          <div class="online-count"><div class="online-dot"></div><span>Komunitas Aktif</span></div>
+        </div>
+      </div>
+
+      <!-- Create Post -->
+      <div class="card create-post">
+        <div class="create-post-head">
+          <div id="cp-avatar" class="avatar"></div>
+          <textarea id="post-text" placeholder="Bagikan sesuatu dengan komunitas NGC..."></textarea>
+        </div>
+        <div id="post-img-preview-wrap" class="post-img-preview-wrap hidden">
+          <img id="post-img-preview" src="" alt="preview">
+          <button class="btn-remove-img" onclick="removePostImage()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="create-post-foot">
+          <label for="post-img-input" class="btn-attach">
+            <i class="fas fa-image"></i> Foto
+          </label>
+          <input type="file" id="post-img-input" accept="image/*" class="hidden" onchange="handlePostImageSelect(this)">
+          <button class="btn-post" id="btn-submit-post" onclick="submitPost()">
+            <i class="fas fa-paper-plane"></i> Posting
           </button>
-          ${(mine||admin)?`
-          <button class="dd-del" onclick="deletePost('${pid}');closeMenu('${pid}')">
-            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-            Hapus
-          </button>`:""}
+        </div>
+      </div>
+
+      <!-- Feed -->
+      <div id="feed-container">
+        <div class="feed-status">
+          <i class="fas fa-spinner spin"></i>
+          <p>Memuat postingan...</p>
         </div>
       </div>
     </div>
-    ${data.imageURL?`<img class="post-img" src="${esc(data.imageURL)}" alt="" loading="lazy" />`:""}
-    ${data.caption?`<div class="post-cap-wrap"><p class="post-cap">${esc(data.caption)}</p></div>`:""}
-    <div class="post-actions">
-      <button class="act-btn${liked?" liked":""}" id="like-${pid}" onclick="toggleLike('${pid}',this)">
-        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-        <span id="lc-${pid}">${lc}</span>
-      </button>
-      <button class="act-btn" onclick="openComments('${pid}')">
-        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-        <span>${cc}</span>
-      </button>
-      <button class="act-btn" onclick="sharePost('${pid}')">
-        <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        SHARE
-      </button>
-    </div>`;
-  return card;
+
+    <!-- LINKS PANEL -->
+    <div id="panel-links" class="panel hidden">
+      <div class="panel-header">
+        <h2><i class="fas fa-link"></i> Links</h2>
+        <p>Temukan kami di berbagai platform</p>
+      </div>
+
+      <div class="section-title"><i class="fas fa-globe"></i> Sosial Media</div>
+      <a id="lnk-discord" href="#" class="link-card" target="_blank" rel="noopener">
+        <div class="link-icon discord"><i class="fab fa-discord"></i></div>
+        <div class="link-info">
+          <h3>Discord</h3>
+          <p id="lbl-discord">Join server NGC</p>
+        </div>
+        <i class="fas fa-external-link-alt link-arrow"></i>
+      </a>
+      <a id="lnk-tiktok" href="#" class="link-card" target="_blank" rel="noopener">
+        <div class="link-icon tiktok"><i class="fab fa-tiktok"></i></div>
+        <div class="link-info">
+          <h3>TikTok</h3>
+          <p id="lbl-tiktok">Follow kami di TikTok</p>
+        </div>
+        <i class="fas fa-external-link-alt link-arrow"></i>
+      </a>
+
+      <div class="section-title" style="margin-top:8px"><i class="fas fa-gamepad"></i> Roblox Maps</div>
+      <div id="roblox-container"></div>
+    </div>
+
+    <!-- FOUNDERS PANEL -->
+    <div id="panel-founders" class="panel hidden">
+      <div class="panel-header">
+        <h2><i class="fas fa-crown"></i> Pendiri & Struktur</h2>
+        <p>Struktur Organisasi NextGen Collective</p>
+      </div>
+      <div id="founders-container"></div>
+    </div>
+
+    <!-- PROFILE PANEL -->
+    <div id="panel-profile" class="panel hidden">
+      <div id="profile-content"></div>
+    </div>
+
+  </main>
+
+  <!-- Mobile Bottom Nav -->
+  <nav id="mobile-nav">
+    <div class="mob-nav-inner">
+      <div class="mob-nav-item active" data-panel="home" onclick="showPanel('home')">
+        <i class="fas fa-home"></i><span>Beranda</span>
+      </div>
+      <div class="mob-nav-item" data-panel="links" onclick="showPanel('links')">
+        <i class="fas fa-link"></i><span>Links</span>
+      </div>
+      <div class="mob-nav-item" data-panel="founders" onclick="showPanel('founders')">
+        <i class="fas fa-crown"></i><span>Pendiri</span>
+      </div>
+      <div class="mob-nav-item" data-panel="profile" onclick="showPanel('profile')">
+        <i class="fas fa-user"></i><span>Profil</span>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<!-- Image Modal -->
+<div id="img-modal" class="hidden" onclick="closeImgModal()">
+  <button id="img-modal-close" onclick="closeImgModal()"><i class="fas fa-times"></i></button>
+  <img id="img-modal-img" src="" alt="">
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Hidden file inputs -->
+<input type="file" id="profile-photo-input" accept="image/*" class="hidden" onchange="handleProfilePhotoChange(this)">
+
+
+<script>
+/* ================================================
+   NGC — NextGen Collective  |  JavaScript
+================================================ */
+
+/* ============================================================
+   KONFIGURASI — EDIT BAGIAN INI UNTUK KUSTOMISASI
+   ============================================================ */
+
+const FIREBASE_CONFIG = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+
+// --- ROLE USERS ---
+// Isi dengan username (displayName) yang sudah daftarkan
+const ROLE_USERS = {
+  owner:         ['OwnerUsername'],
+  raja_iblis:    ['RajaIblisUsername'],
+  ketua:         ['KetuaUsername'],
+  administrasi:  ['Admin1', 'Admin2']
+};
+
+// --- FOUNDERS DATA ---
+// Isi dengan data pendiri
+const FOUNDERS_DATA = [
+  {
+    tier:    'owner',
+    label:   '👑 Owner / Founder',
+    color:   '#ffd700',
+    members: [
+      { name: 'Owner Name', username: 'OwnerUsername', desc: 'Founder & Owner NGC' }
+    ]
+  },
+  {
+    tier:    'raja_iblis',
+    label:   '👿 Raja Iblis',
+    color:   '#ff4757',
+    members: [
+      { name: 'Name', username: 'Username', desc: 'Raja Iblis NGC' }
+    ]
+  },
+  {
+    tier:    'ketua',
+    label:   '⚔️ Mentri Pertahanan / Ketua',
+    color:   '#a29bfe',
+    members: [
+      { name: 'Name', username: 'Username', desc: 'Mentri Pertahanan / Ketua' }
+    ]
+  },
+  {
+    tier:    'administrasi',
+    label:   '🛡️ Divisi Administrasi',
+    color:   '#00d4ff',
+    members: [
+      { name: 'Admin 1', username: 'Admin1', desc: 'Divisi Administrasi' },
+      { name: 'Admin 2', username: 'Admin2', desc: 'Divisi Administrasi' }
+    ]
+  }
+];
+
+// --- LINKS ---
+const LINKS_CONFIG = {
+  discord: { url: 'https://discord.gg/YOURLINK',       label: 'Join Server NGC' },
+  tiktok:  { url: 'https://tiktok.com/@YOURACCOUNT',   label: '@nextgencollective' },
+  roblox:  [
+    { name: 'Map 1',  url: 'https://www.roblox.com/games/YOUR_ID_1', desc: 'Deskripsi map 1' },
+    { name: 'Map 2',  url: 'https://www.roblox.com/games/YOUR_ID_2', desc: 'Deskripsi map 2' },
+    { name: 'Map 3',  url: 'https://www.roblox.com/games/YOUR_ID_3', desc: 'Deskripsi map 3' }
+  ]
+};
+
+/* ============================================================
+   FIREBASE INIT
+   ============================================================ */
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+const FieldValue = firebase.firestore.FieldValue;
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let currentUser     = null;   // Firebase auth user
+let currentUserData = null;   // Firestore user document
+let feedUnsub       = null;   // Feed real-time listener unsubscribe
+let commentUnsubs   = {};     // Comment listeners keyed by postId
+let postImgBase64   = null;   // Pending post image base64
+let lastVisible     = null;   // Pagination cursor
+let noMorePosts     = false;
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function getInitials(name) {
+  if (!name) return '?';
+  return name.slice(0, 2).toUpperCase();
 }
 
-// ─── POST MENU ──────────────────────────────
-function toggleMenu(id) {
-  const m = document.getElementById("menu-"+id);
-  if (!m) return;
-  m.classList.toggle("hidden");
-  if (!m.classList.contains("hidden")) {
-    setTimeout(() => {
-      function h(e) { if (!m.contains(e.target)) { m.classList.add("hidden"); document.removeEventListener("click",h); } }
-      document.addEventListener("click",h);
-    }, 10);
+function getAvatarColor(name) {
+  const colors = ['#1a6fff','#00d4ff','#a29bfe','#ffd700','#ff6b9d','#00c689','#ff7f3f'];
+  let hash = 0;
+  for (let i = 0; i < (name||'').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function formatRelativeTime(ts) {
+  if (!ts) return 'baru saja';
+  const ms   = ts.toDate ? ts.toDate().getTime() : Number(ts);
+  const diff = Date.now() - ms;
+  const s = Math.floor(diff / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+  if (s < 60)  return 'baru saja';
+  if (m < 60)  return `${m} menit lalu`;
+  if (h < 24)  return `${h} jam lalu`;
+  if (d < 7)   return `${d} hari lalu`;
+  return new Date(ms).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function getUserRole(username) {
+  if (!username) return 'member';
+  if (ROLE_USERS.owner.includes(username))        return 'owner';
+  if (ROLE_USERS.raja_iblis.includes(username))   return 'raja_iblis';
+  if (ROLE_USERS.ketua.includes(username))        return 'ketua';
+  if (ROLE_USERS.administrasi.includes(username)) return 'administrasi';
+  return 'member';
+}
+
+function getRoleBadgeHTML(role) {
+  const map = {
+    owner:        { cls:'badge-owner', icon:'👑', label:'Owner' },
+    raja_iblis:   { cls:'badge-raja',  icon:'👿', label:'Raja Iblis' },
+    ketua:        { cls:'badge-ketua', icon:'⚔️', label:'Ketua' },
+    administrasi: { cls:'badge-admin', icon:'🛡️', label:'Admin' },
+    member:       { cls:'badge-member',icon:'',   label:'Member' }
+  };
+  const b = map[role] || map.member;
+  if (role === 'member') return `<span class="badge ${b.cls}">${b.label}</span>`;
+  return `<span class="badge ${b.cls}">${b.icon} ${b.label}</span>`;
+}
+
+function buildAvatarHTML(username, photoBase64, size) {
+  const cls = size === 'lg' ? 'avatar avatar-lg' : (size === 'xl' ? 'avatar avatar-xl' : 'avatar');
+  if (photoBase64) {
+    return `<div class="${cls}"><img src="${photoBase64}" alt="${username}"></div>`;
+  }
+  const color = getAvatarColor(username);
+  const init  = getInitials(username);
+  return `<div class="${cls}" style="background:${color}">${init}</div>`;
+}
+
+async function compressImage(file, maxWidth, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = e => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale  = Math.min(maxWidth / img.width, 1);
+        canvas.width  = Math.round(img.width  * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function showToast(msg, type = 'info') {
+  const icons = { success:'fa-check-circle', error:'fa-exclamation-circle', info:'fa-info-circle' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<i class="fas ${icons[type]||icons.info}"></i> ${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => {
+    el.style.animation = 'none';
+    el.style.opacity   = '0';
+    el.style.transform = 'translateX(20px)';
+    el.style.transition= 'all 0.3s ease';
+    setTimeout(() => el.remove(), 300);
+  }, 3000);
+}
+
+/* ============================================================
+   AUTH FUNCTIONS
+   ============================================================ */
+function switchAuthTab(tab) {
+  document.getElementById('form-login').classList.toggle('hidden',    tab !== 'login');
+  document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
+  document.querySelectorAll('.auth-tab').forEach((el, i) => {
+    el.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+  });
+  clearAuthErrors();
+}
+
+function clearAuthErrors() {
+  document.getElementById('login-err').classList.add('hidden');
+  document.getElementById('reg-err').classList.add('hidden');
+}
+
+async function handleLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl    = document.getElementById('login-err');
+  errEl.classList.add('hidden');
+  if (!email || !password) { errEl.textContent='Isi semua field!'; errEl.classList.remove('hidden'); return; }
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+  } catch(e) {
+    errEl.textContent = translateAuthError(e.code);
+    errEl.classList.remove('hidden');
   }
 }
-function closeMenu(id) { document.getElementById("menu-"+id)?.classList.add("hidden"); }
 
-// ─── SUBMIT POST ────────────────────────────
-let selFile = null;
+async function handleRegister() {
+  const username = document.getElementById('reg-username').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const errEl    = document.getElementById('reg-err');
+  errEl.classList.add('hidden');
+  if (!username || !email || !password) { errEl.textContent='Isi semua field!'; errEl.classList.remove('hidden'); return; }
+  if (username.includes(' '))           { errEl.textContent='Username tidak boleh ada spasi!'; errEl.classList.remove('hidden'); return; }
+  if (username.length < 3)              { errEl.textContent='Username minimal 3 karakter!'; errEl.classList.remove('hidden'); return; }
+  if (password.length < 6)             { errEl.textContent='Password minimal 6 karakter!'; errEl.classList.remove('hidden'); return; }
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    await cred.user.updateProfile({ displayName: username });
+    await db.collection('users').doc(cred.user.uid).set({
+      uid:          cred.user.uid,
+      username:     username,
+      email:        email,
+      bio:          '',
+      photoBase64:  null,
+      createdAt:    FieldValue.serverTimestamp()
+    });
+  } catch(e) {
+    errEl.textContent = translateAuthError(e.code);
+    errEl.classList.remove('hidden');
+  }
+}
 
-function previewImg(e) {
-  const f = e.target.files[0]; if (!f) return;
-  selFile = f;
-  const r = new FileReader();
-  r.onload = ev => {
-    document.getElementById("imgPreview").src = ev.target.result;
-    document.getElementById("imgPreviewWrap").classList.remove("hidden");
+async function handleLogout() {
+  if (!confirm('Yakin mau keluar?')) return;
+  cleanupListeners();
+  await auth.signOut();
+}
+
+function translateAuthError(code) {
+  const m = {
+    'auth/user-not-found':       'Email tidak ditemukan.',
+    'auth/wrong-password':       'Password salah.',
+    'auth/email-already-in-use': 'Email sudah dipakai.',
+    'auth/invalid-email':        'Format email tidak valid.',
+    'auth/weak-password':        'Password terlalu lemah.',
+    'auth/too-many-requests':    'Terlalu banyak percobaan. Coba lagi nanti.',
+    'auth/invalid-credential':   'Email atau password salah.'
   };
-  r.readAsDataURL(f);
+  return m[code] || 'Terjadi kesalahan. Coba lagi.';
 }
 
-function removePreview() {
-  selFile = null;
-  document.getElementById("imgPreview").src = "";
-  document.getElementById("imgPreviewWrap").classList.add("hidden");
-  document.getElementById("imgUpload").value = "";
+/* ============================================================
+   USER FUNCTIONS
+   ============================================================ */
+async function loadCurrentUserData(uid) {
+  const snap = await db.collection('users').doc(uid).get();
+  if (snap.exists) {
+    currentUserData = snap.data();
+  } else {
+    currentUserData = { uid, username: currentUser.displayName, bio:'', photoBase64: null };
+  }
 }
 
-function autoResize(el) {
-  el.style.height = "auto";
-  el.style.height = Math.min(el.scrollHeight, 140) + "px";
+function updateSidebarUser() {
+  if (!currentUserData) return;
+  const { username, photoBase64 } = currentUserData;
+  const role   = getUserRole(username);
+  const sbAv   = document.getElementById('sb-avatar');
+  const sbName = document.getElementById('sb-username');
+  const sbBadge= document.getElementById('sb-badge');
+  sbAv.innerHTML    = photoBase64 ? `<img src="${photoBase64}" alt="${username}">` : getInitials(username);
+  if (!photoBase64) sbAv.style.background = getAvatarColor(username);
+  sbName.textContent = username;
+  sbBadge.innerHTML  = getRoleBadgeHTML(role);
+
+  // Welcome message
+  const wm = document.getElementById('welcome-msg');
+  if (wm) wm.textContent = `Halo, ${username}! Selamat datang di komunitas NGC 🎮`;
+
+  // Create post avatar
+  const cpAv = document.getElementById('cp-avatar');
+  if (cpAv) {
+    cpAv.innerHTML = photoBase64 ? `<img src="${photoBase64}" alt="${username}">` : getInitials(username);
+    if (!photoBase64) cpAv.style.background = getAvatarColor(username);
+  }
+}
+
+/* ============================================================
+   POST FUNCTIONS
+   ============================================================ */
+function handlePostImageSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) { showToast('Ukuran file maksimal 8MB!', 'error'); input.value=''; return; }
+  compressImage(file, 1000, 0.75).then(base64 => {
+    postImgBase64 = base64;
+    const wrap = document.getElementById('post-img-preview-wrap');
+    const prev = document.getElementById('post-img-preview');
+    prev.src = base64;
+    wrap.classList.remove('hidden');
+  }).catch(() => showToast('Gagal memuat gambar.', 'error'));
+}
+
+function removePostImage() {
+  postImgBase64 = null;
+  document.getElementById('post-img-preview-wrap').classList.add('hidden');
+  document.getElementById('post-img-input').value = '';
 }
 
 async function submitPost() {
-  const caption = v("captionInput");
-  if (!caption && !selFile) { toast("Tambahkan caption atau foto terlebih dahulu."); return; }
-
-  // Disable tombol agar tidak double submit
-  const btn = document.getElementById("postBtn");
-  if (btn) { btn.disabled = true; btn.style.opacity = ".5"; }
-
-  const prog = document.getElementById("uploadProg");
-  const fill = document.getElementById("progFill");
-  const txt  = document.getElementById("progTxt");
-  let imageURL = "";
-
+  const text = document.getElementById('post-text').value.trim();
+  if (!text && !postImgBase64) { showToast('Tulis sesuatu dulu!', 'error'); return; }
+  if (text.length > 2000) { showToast('Teks maksimal 2000 karakter!', 'error'); return; }
+  const btn = document.getElementById('btn-submit-post');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner spin"></i> Posting...';
   try {
-    if (selFile) {
-      prog.classList.remove("hidden");
-      fill.style.width = "0%";
-      // Pastikan storage sudah diinisialisasi
-      if (!storage) throw new Error("Firebase Storage belum diinisialisasi. Periksa firebase-config.js");
-      const ext  = selFile.name.split(".").pop();
-      const path = `posts/${CU.uid}/${Date.now()}.${ext}`;
-      const ref  = storage.ref(path);
-      const task = ref.put(selFile, { contentType: selFile.type });
-
-      await new Promise((res, rej) => {
-        task.on("state_changed",
-          snap => {
-            const pct = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
-            fill.style.width = pct + "%";
-            txt.textContent = `Mengunggah... ${pct}%`;
-          },
-          err => rej(err),
-          async () => {
-            imageURL = await task.snapshot.ref.getDownloadURL();
-            res();
-          }
-        );
-      });
-    }
-
-    txt.textContent = "Memposting...";
-    await db.collection("posts").add({
-      caption,
-      imageURL,
-      authorId:   CU.uid,
-      username:   CUD?.username || "User",
-      photoURL:   CUD?.photoURL || "",
-      authorRole: CUD?.role || "member",
-      likeCount: 0,
+    await db.collection('posts').add({
+      authorId:     currentUser.uid,
+      authorName:   currentUserData.username,
+      authorPhoto:  currentUserData.photoBase64 || null,
+      content:      text,
+      imageBase64:  postImgBase64 || null,
+      likes:        [],
+      likeCount:    0,
       commentCount: 0,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      timestamp:    FieldValue.serverTimestamp()
     });
-
-    // Increment postCount untuk leaderboard
-    await db.collection("users").doc(CU.uid).update({
-      postCount: firebase.firestore.FieldValue.increment(1)
-    });
-
-    document.getElementById("captionInput").value = "";
-    document.getElementById("captionInput").style.height = "auto";
-    removePreview();
-    prog.classList.add("hidden");
-    fill.style.width = "0%";
-    toast("✅ Postingan berhasil dikirim!");
-    loadStats();
-
+    document.getElementById('post-text').value = '';
+    removePostImage();
+    showToast('Postingan berhasil dibuat! ✨', 'success');
   } catch(e) {
-    prog.classList.add("hidden");
-    fill.style.width = "0%";
-    console.error("submitPost error:", e);
-    toast("❌ Gagal posting: " + (e.message || "Periksa koneksi dan Firebase Storage."));
-  } finally {
-    if (btn) { btn.disabled = false; btn.style.opacity = "1"; }
+    showToast('Gagal membuat postingan.', 'error');
+    console.error(e);
+  }
+  btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Posting';
+}
+
+async function likePost(postId, currentLikes) {
+  if (!currentUser) return;
+  const uid  = currentUser.uid;
+  const ref  = db.collection('posts').doc(postId);
+  const liked = currentLikes.includes(uid);
+  try {
+    await ref.update({
+      likes:     liked ? FieldValue.arrayRemove(uid) : FieldValue.arrayUnion(uid),
+      likeCount: FieldValue.increment(liked ? -1 : 1)
+    });
+  } catch(e) { console.error('Like error:', e); }
+}
+
+async function deletePost(postId) {
+  if (!confirm('Hapus postingan ini?')) return;
+  try {
+    await db.collection('posts').doc(postId).delete();
+    showToast('Postingan dihapus.', 'success');
+  } catch(e) { showToast('Gagal menghapus.', 'error'); }
+}
+
+function sharePost(content) {
+  const text = `[NextGen Collective]\n${content}`;
+  if (navigator.share) {
+    navigator.share({ title: 'NextGen Collective', text }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(text).then(() => showToast('Konten disalin ke clipboard! 📋', 'info'));
   }
 }
 
-// ─── LIKES ──────────────────────────────────
-async function toggleLike(pid, btn) {
-  const lRef = db.collection("posts").doc(pid).collection("likes").doc(CU.uid);
-  const pRef = db.collection("posts").doc(pid);
-  const cnt  = document.getElementById("lc-"+pid);
-  try {
-    const ld = await lRef.get();
-    if (ld.exists) {
-      await lRef.delete();
-      await pRef.update({ likeCount: firebase.firestore.FieldValue.increment(-1) });
-      btn.classList.remove("liked");
-      cnt.textContent = Math.max(0, parseInt(cnt.textContent)-1);
-    } else {
-      await lRef.set({ at: firebase.firestore.FieldValue.serverTimestamp() });
-      await pRef.update({ likeCount: firebase.firestore.FieldValue.increment(1) });
-      await db.collection("users").doc(CU.uid).update({ likeCount: firebase.firestore.FieldValue.increment(1) });
-      btn.classList.add("liked");
-      cnt.textContent = parseInt(cnt.textContent)+1;
-    }
-  } catch(e) { console.error("toggleLike:", e); }
-}
+/* ============================================================
+   FEED
+   ============================================================ */
+function loadFeed() {
+  const container = document.getElementById('feed-container');
+  lastVisible  = null;
+  noMorePosts  = false;
+  container.innerHTML = `<div class="feed-status"><i class="fas fa-spinner spin"></i><p>Memuat postingan...</p></div>`;
 
-// ─── COMMENTS ───────────────────────────────
-function openComments(pid) {
-  activePid = pid;
-  document.getElementById("commentModal").classList.remove("hidden");
-  loadComments(pid);
-}
-function closeComments() {
-  document.getElementById("commentModal").classList.add("hidden");
-  document.getElementById("commentsList").innerHTML = "";
-  document.getElementById("commentInput").value = "";
-  activePid = null;
-}
+  if (feedUnsub) { feedUnsub(); feedUnsub = null; }
 
-async function loadComments(pid) {
-  const el = document.getElementById("commentsList");
-  el.innerHTML = '<div class="loader-wrap" style="padding:16px 0"><div class="ngc-spinner"></div></div>';
-  try {
-    const snap = await db.collection("posts").doc(pid).collection("comments")
-      .orderBy("createdAt","asc").limit(50).get();
+  const query = db.collection('posts')
+    .orderBy('timestamp', 'desc')
+    .limit(10);
+
+  feedUnsub = query.onSnapshot(snap => {
     if (snap.empty) {
-      el.innerHTML = '<p style="text-align:center;color:var(--muted);font-size:.8rem;padding:14px 0;">Belum ada komentar.</p>';
+      container.innerHTML = `<div class="feed-status"><i class="fas fa-comment-slash"></i><p>Belum ada postingan. Jadilah yang pertama!</p></div>`;
       return;
     }
-    el.innerHTML = "";
-    snap.forEach(doc => {
-      const d   = doc.data();
-      const bCls = roleCls(d.authorRole||"member");
-      const bLbl = roleLabel(d.username, d.authorRole||"member");
-      const badge = (bCls && bLbl) ? `<span class="comment-badge ${bCls}">${bLbl}</span>` : "";
-      const div = document.createElement("div");
-      div.className = "comment-item";
-      div.innerHTML = `
-        <img class="ava-sm" src="${esc(d.photoURL||genAva(d.username))}" alt="" onerror="this.src='${genAva(d.username)}'" />
-        <div class="comment-body">
-          <div class="comment-ar">
-            <span class="comment-author">${esc(d.username)}</span>${badge}
-          </div>
-          <div class="comment-text">${esc(d.text)}</div>
-          <div class="comment-time">${d.createdAt?fmt(d.createdAt.toDate()):"Baru saja"}</div>
-        </div>`;
-      el.appendChild(div);
+    lastVisible = snap.docs[snap.docs.length - 1];
+    container.innerHTML = '';
+    snap.docs.forEach(doc => {
+      const existing = document.getElementById('post-' + doc.id);
+      if (existing) {
+        // Update like count only (not full re-render to avoid comment collapse)
+        const data = doc.data();
+        const likeBtn = existing.querySelector('.like-btn');
+        if (likeBtn) {
+          const liked = data.likes && data.likes.includes(currentUser.uid);
+          likeBtn.className = `btn-action like-btn${liked?' liked':''}`;
+          likeBtn.innerHTML = `<i class="fas fa-heart"></i> ${data.likeCount||0}`;
+        }
+      } else {
+        container.appendChild(createPostElement(doc.id, doc.data()));
+      }
     });
-    el.scrollTop = el.scrollHeight;
-  } catch(e) { console.error("loadComments:", e); }
-}
-
-async function addComment() {
-  const input = document.getElementById("commentInput");
-  const text  = input.value.trim();
-  if (!text || !activePid) return;
-  input.value = "";
-  try {
-    await db.collection("posts").doc(activePid).collection("comments").add({
-      text,
-      authorId:   CU.uid,
-      username:   CUD?.username || "User",
-      photoURL:   CUD?.photoURL || "",
-      authorRole: CUD?.role || "member",
-      createdAt:  firebase.firestore.FieldValue.serverTimestamp()
+    // Check for deleted posts
+    const rendered = container.querySelectorAll('.post-card');
+    rendered.forEach(el => {
+      const id = el.id.replace('post-', '');
+      if (!snap.docs.find(d => d.id === id)) el.remove();
     });
-    await db.collection("posts").doc(activePid).update({ commentCount: firebase.firestore.FieldValue.increment(1) });
-    await db.collection("users").doc(CU.uid).update({ commentCount: firebase.firestore.FieldValue.increment(1) });
-    loadComments(activePid);
-  } catch(e) { console.error("addComment:", e); }
+    if (snap.docs.length >= 10) appendLoadMore();
+  }, err => {
+    console.error('Feed error:', err);
+    container.innerHTML = `<div class="feed-status"><i class="fas fa-exclamation-triangle"></i><p>Gagal memuat. Refresh halaman.</p></div>`;
+  });
 }
 
-// ─── SHARE / DELETE ─────────────────────────
-function sharePost(pid) {
-  const url = `${location.origin}${location.pathname}?post=${pid}`;
-  navigator.clipboard?.writeText(url).then(()=>toast("🔗 Link disalin!")).catch(()=>toast("Post ID: "+pid));
-}
-function copyLink(url) { navigator.clipboard?.writeText(url).then(()=>toast("🔗 Link disalin!")).catch(()=>{}); }
-
-async function deletePost(pid) {
-  if (!confirm("Hapus postingan ini secara permanen?")) return;
-  try {
-    await db.collection("posts").doc(pid).delete();
-    document.getElementById("post-"+pid)?.remove();
-    toast("🗑️ Postingan dihapus.");
-    loadStats();
-  } catch(e) { toast("❌ Gagal menghapus."); console.error(e); }
+async function loadMore() {
+  if (noMorePosts || !lastVisible) return;
+  const snap = await db.collection('posts')
+    .orderBy('timestamp','desc')
+    .startAfter(lastVisible)
+    .limit(10)
+    .get();
+  document.getElementById('load-more-wrap')?.remove();
+  if (snap.empty) { noMorePosts = true; return; }
+  lastVisible = snap.docs[snap.docs.length-1];
+  const container = document.getElementById('feed-container');
+  snap.docs.forEach(doc => container.appendChild(createPostElement(doc.id, doc.data())));
+  if (snap.docs.length >= 10) appendLoadMore();
 }
 
-// ─── PROFILE ────────────────────────────────
-async function loadProfile() {
-  const ava = CUD?.photoURL || genAva(CUD?.username||"N");
-  setAva("profileAva", ava, CUD?.username||"N");
-  setText("profileName",  CUD?.username || "—");
-  setText("profileEmail", CU?.email || "—");
-  setText("profileBio",   CUD?.bio || "Belum ada bio.");
-  const chip = document.getElementById("profileChip");
-  if (chip) chip.textContent = roleDisp(CUD?.role||"member");
+function appendLoadMore() {
+  const existing = document.getElementById('load-more-wrap');
+  if (existing) return;
+  const el = document.createElement('div');
+  el.id = 'load-more-wrap';
+  el.className = 'load-more-wrap';
+  el.innerHTML = `<button class="btn-load-more" onclick="loadMore()"><i class="fas fa-chevron-down"></i> Muat Lebih Banyak</button>`;
+  document.getElementById('feed-container').appendChild(el);
+}
 
-  const el = document.getElementById("userPostFeed");
-  el.innerHTML = '<div class="loader-wrap"><div class="ngc-spinner"></div></div>';
-  try {
-    const snap = await db.collection("posts")
-      .where("authorId","==",CU.uid)
-      .orderBy("createdAt","desc").limit(20).get();
-    if (snap.empty) {
-      el.innerHTML = '<p style="text-align:center;color:var(--muted);padding:44px 0;font-family:Rajdhani,sans-serif;letter-spacing:.08em;font-size:.8rem;">BELUM ADA POSTINGAN.</p>';
-      return;
+function createPostElement(postId, data) {
+  const {
+    authorName='', authorPhoto=null, content='',
+    imageBase64=null, likes=[], likeCount=0,
+    commentCount=0, timestamp=null, authorId=''
+  } = data;
+
+  const role   = getUserRole(authorName);
+  const isMe   = currentUser && currentUser.uid === authorId;
+  const liked  = currentUser && likes.includes(currentUser.uid);
+
+  const el = document.createElement('div');
+  el.className = 'post-card card';
+  el.id = 'post-' + postId;
+  el.innerHTML = `
+    <div class="post-head">
+      ${buildAvatarHTML(authorName, authorPhoto, 'sm')}
+      <div class="post-meta">
+        <div class="post-author-row">
+          <span class="post-author">${escHtml(authorName)}</span>
+          ${getRoleBadgeHTML(role)}
+        </div>
+        <div class="post-time">${formatRelativeTime(timestamp)}</div>
+      </div>
+      ${isMe ? `<button class="btn-post-menu" onclick="deletePost('${postId}')"><i class="fas fa-trash"></i></button>` : ''}
+    </div>
+    ${content ? `<div class="post-body">${escHtml(content)}</div>` : ''}
+    ${imageBase64 ? `<div class="post-image"><img src="${imageBase64}" alt="post" onclick="openImgModal('${postId}')"></div>` : ''}
+    <div class="post-footer">
+      <button class="btn-action like-btn${liked?' liked':''}" onclick="likePost('${postId}', ${JSON.stringify(likes)})">
+        <i class="fas fa-heart"></i> ${likeCount||0}
+      </button>
+      <button class="btn-action" onclick="toggleComments('${postId}')">
+        <i class="fas fa-comment"></i> <span id="cc-${postId}">${commentCount||0}</span>
+      </button>
+      <button class="btn-action" onclick="sharePost(${JSON.stringify(content)})">
+        <i class="fas fa-share-alt"></i> Share
+      </button>
+    </div>
+    <div id="comments-${postId}" class="comments-section hidden">
+      <div id="clist-${postId}" class="comment-list"><div class="comments-loading"><i class="fas fa-spinner spin"></i></div></div>
+      <div class="comment-input-row">
+        ${buildAvatarHTML(currentUserData?.username||'', currentUserData?.photoBase64||null, 'sm')}
+        <input type="text" class="comment-input" id="cinput-${postId}" placeholder="Tulis komentar..." onkeydown="if(event.key==='Enter')submitComment('${postId}')">
+        <button class="btn-send-comment" onclick="submitComment('${postId}')"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+  `;
+  return el;
+}
+
+/* ============================================================
+   COMMENTS
+   ============================================================ */
+function toggleComments(postId) {
+  const sec = document.getElementById('comments-' + postId);
+  if (!sec) return;
+  const isHidden = sec.classList.contains('hidden');
+  sec.classList.toggle('hidden', !isHidden);
+  if (isHidden) {
+    loadCommentsRT(postId);
+  } else {
+    if (commentUnsubs[postId]) {
+      commentUnsubs[postId]();
+      delete commentUnsubs[postId];
     }
-    el.innerHTML = "";
-    for (const doc of snap.docs) el.appendChild(await buildPost(doc.id, doc.data()));
-  } catch(e) {
-    el.innerHTML = '<p style="text-align:center;color:var(--muted);padding:44px 0;">Gagal memuat postingan.</p>';
-    console.error("loadProfile posts:", e);
   }
 }
 
-function openEditProfile() {
-  document.getElementById("editUsername").value = CUD?.username || "";
-  document.getElementById("editBio").value      = CUD?.bio || "";
-  document.getElementById("editModal").classList.remove("hidden");
-}
-function closeEditProfile() { document.getElementById("editModal").classList.add("hidden"); }
-
-async function saveProfile() {
-  const username = document.getElementById("editUsername").value.trim();
-  const bio      = document.getElementById("editBio").value.trim();
-  if (!username) { toast("Username tidak boleh kosong."); return; }
-  const entry = roleEntry(username);
-  // Jika username ada di TEAM_ROLES → pakai role baru. Kalau tidak → pertahankan role lama jika admin, else member
-  const role = entry ? entry.role : (isAdmin(CUD.role) ? CUD.role : "member");
-  try {
-    await db.collection("users").doc(CU.uid).update({ username, bio, role });
-    CUD.username = username; CUD.bio = bio; CUD.role = role;
-    closeEditProfile();
-    updateUI();
-    refreshAdminNav();
-    loadProfile();
-    loadTeamStructure();
-    toast("✅ Profil diperbarui! Role: " + roleDisp(role));
-  } catch(e) { toast("❌ Gagal menyimpan."); console.error(e); }
-}
-
-async function uploadAva(e) {
-  const f = e.target.files[0]; if (!f) return;
-  toast("Mengunggah foto profil...");
-  try {
-    if (!storage) throw new Error("Firebase Storage belum diinisialisasi.");
-    const ext  = f.name.split(".").pop();
-    const path = `avatars/${CU.uid}/${Date.now()}.${ext}`;
-    const ref  = storage.ref(path);
-    const snap = await ref.put(f, { contentType: f.type });
-    const url  = await snap.ref.getDownloadURL();
-    await db.collection("users").doc(CU.uid).update({ photoURL: url });
-    CUD.photoURL = url;
-    setAva("profileAva", url, CUD.username);
-    updateUI();
-    toast("✅ Foto profil diperbarui!");
-  } catch(e) { toast("❌ Gagal upload foto: " + e.message); console.error("uploadAva:", e); }
-}
-
-// ─── ADMIN: CHAT ────────────────────────────
-function loadAdminChat() {
-  if (!isAdmin(CUD?.role)) return;
-  const el = document.getElementById("adminChatMsgs");
-  el.innerHTML = '<div class="loader-wrap"><div class="ngc-spinner"></div></div>';
-  if (chatUnsub) chatUnsub();
-  chatUnsub = db.collection("adminChat").orderBy("createdAt","asc").limit(100)
+function loadCommentsRT(postId) {
+  if (commentUnsubs[postId]) return;
+  const list = document.getElementById('clist-' + postId);
+  if (!list) return;
+  list.innerHTML = `<div class="comments-loading"><i class="fas fa-spinner spin"></i></div>`;
+  commentUnsubs[postId] = db.collection('posts').doc(postId)
+    .collection('comments')
+    .orderBy('timestamp', 'asc')
     .onSnapshot(snap => {
-      el.innerHTML = "";
       if (snap.empty) {
-        el.innerHTML = '<p style="text-align:center;color:var(--muted);font-size:.8rem;padding:26px 0;">Belum ada pesan.</p>';
+        list.innerHTML = `<div class="no-comments">Belum ada komentar. Jadilah yang pertama! 💬</div>`;
         return;
       }
-      snap.forEach(doc => {
-        const d  = doc.data();
-        const own = d.authorId === CU.uid;
-        const div = document.createElement("div");
-        div.className = `chat-msg${own?" own":""}`;
-        div.innerHTML = `
-          <img class="ava-sm" src="${esc(d.photoURL||genAva(d.username))}" alt="" onerror="this.src='${genAva(d.username)}'" />
-          <div class="chat-bubble">
-            <div class="chat-author">${esc(d.username)}</div>
-            <div class="chat-text">${esc(d.text)}</div>
-            <div class="chat-time">${d.createdAt?fmt(d.createdAt.toDate()):"Baru saja"}</div>
-          </div>`;
-        el.appendChild(div);
-      });
-      el.scrollTop = el.scrollHeight;
-    }, err => console.error("adminChat:", err));
+      list.innerHTML = '';
+      snap.docs.forEach(doc => list.appendChild(createCommentEl(doc.id, doc.data(), postId)));
+    }, err => {
+      list.innerHTML = `<div class="no-comments">Gagal memuat komentar.</div>`;
+    });
 }
 
-async function sendAdminChat() {
-  if (!isAdmin(CUD?.role)) return;
-  const input = document.getElementById("adminChatInput");
-  const text  = input.value.trim(); if (!text) return;
-  input.value = "";
+function createCommentEl(commentId, data, postId) {
+  const { authorName='', authorPhoto=null, text='', timestamp=null, authorId='' } = data;
+  const isMe = currentUser && currentUser.uid === authorId;
+  const el = document.createElement('div');
+  el.className = 'comment-item';
+  el.innerHTML = `
+    ${buildAvatarHTML(authorName, authorPhoto, 'sm')}
+    <div class="comment-bubble">
+      <div class="comment-author-row">
+        <span class="comment-author">${escHtml(authorName)}</span>
+        ${getRoleBadgeHTML(getUserRole(authorName))}
+        <span class="comment-time">${formatRelativeTime(timestamp)}</span>
+        ${isMe ? `<button style="background:none;border:none;color:var(--text-600);cursor:pointer;font-size:11px;margin-left:auto" onclick="deleteComment('${postId}','${commentId}')"><i class="fas fa-times"></i></button>` : ''}
+      </div>
+      <div class="comment-text">${escHtml(text)}</div>
+    </div>
+  `;
+  return el;
+}
+
+async function submitComment(postId) {
+  const input = document.getElementById('cinput-' + postId);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  if (text.length > 500) { showToast('Komentar maksimal 500 karakter!', 'error'); return; }
+  input.value = '';
   try {
-    await db.collection("adminChat").add({
+    await db.collection('posts').doc(postId).collection('comments').add({
+      authorId:    currentUser.uid,
+      authorName:  currentUserData.username,
+      authorPhoto: currentUserData.photoBase64 || null,
       text,
-      authorId: CU.uid,
-      username: CUD?.username || "Admin",
-      photoURL: CUD?.photoURL || "",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      timestamp:   FieldValue.serverTimestamp()
     });
-  } catch(e) { toast("❌ Gagal kirim pesan."); console.error(e); }
+    await db.collection('posts').doc(postId).update({
+      commentCount: FieldValue.increment(1)
+    });
+  } catch(e) { showToast('Gagal kirim komentar.', 'error'); console.error(e); }
 }
 
-// ─── ADMIN: USERS ───────────────────────────
-async function loadAdminUsers() {
-  if (!isAdmin(CUD?.role)) return;
-  const el = document.getElementById("adminUserList");
-  el.innerHTML = '<div class="loader-wrap"><div class="ngc-spinner"></div></div>';
+async function deleteComment(postId, commentId) {
   try {
-    const snap = await db.collection("users").orderBy("createdAt","desc").get();
-    el.innerHTML = "";
-    snap.forEach(doc => {
-      const d    = doc.data();
-      const entry= roleEntry(d.username);
-      const bCls = roleCls(d.role||"member");
-      const bLbl = d.banned ? "Banned" : (entry ? entry.display : roleDisp(d.role||"member"));
-      const cls  = d.banned ? "" : bCls;
-      const row  = document.createElement("div");
-      row.className = "admin-user-row";
-      row.innerHTML = `
-        <img class="ava-md" src="${esc(d.photoURL||genAva(d.username))}" alt="" onerror="this.src='${genAva(d.username)}'" />
-        <div class="aur-info">
-          <span class="aur-name">${esc(d.username)}</span>
-          <span class="aur-email">${esc(d.email)}</span>
+    await db.collection('posts').doc(postId).collection('comments').doc(commentId).delete();
+    await db.collection('posts').doc(postId).update({ commentCount: FieldValue.increment(-1) });
+  } catch(e) { showToast('Gagal hapus komentar.', 'error'); }
+}
+
+/* ============================================================
+   IMAGE MODAL
+   ============================================================ */
+function openImgModal(postId) {
+  const postEl = document.getElementById('post-' + postId);
+  if (!postEl) return;
+  const img = postEl.querySelector('.post-image img');
+  if (!img) return;
+  document.getElementById('img-modal-img').src = img.src;
+  document.getElementById('img-modal').classList.remove('hidden');
+}
+function closeImgModal() {
+  document.getElementById('img-modal').classList.add('hidden');
+  document.getElementById('img-modal-img').src = '';
+}
+
+/* ============================================================
+   LINKS PANEL
+   ============================================================ */
+function renderLinks() {
+  document.getElementById('lnk-discord').href = LINKS_CONFIG.discord.url;
+  document.getElementById('lbl-discord').textContent = LINKS_CONFIG.discord.label;
+  document.getElementById('lnk-tiktok').href  = LINKS_CONFIG.tiktok.url;
+  document.getElementById('lbl-tiktok').textContent  = LINKS_CONFIG.tiktok.label;
+
+  const container = document.getElementById('roblox-container');
+  container.innerHTML = '';
+  LINKS_CONFIG.roblox.forEach(map => {
+    const a = document.createElement('a');
+    a.href   = map.url;
+    a.target = '_blank';
+    a.rel    = 'noopener';
+    a.className = 'link-card';
+    a.style.marginBottom = '10px';
+    a.innerHTML = `
+      <div class="link-icon roblox"><i class="fas fa-gamepad"></i></div>
+      <div class="link-info">
+        <h3>${escHtml(map.name)}</h3>
+        <p>${escHtml(map.desc)}</p>
+      </div>
+      <i class="fas fa-external-link-alt link-arrow"></i>
+    `;
+    container.appendChild(a);
+  });
+}
+
+/* ============================================================
+   FOUNDERS PANEL
+   ============================================================ */
+function renderFounders() {
+  const container = document.getElementById('founders-container');
+  container.innerHTML = '';
+  FOUNDERS_DATA.forEach(tier => {
+    const tierEl = document.createElement('div');
+    tierEl.className = 'founders-tier';
+    tierEl.style.marginBottom = '16px';
+    tierEl.innerHTML = `
+      <div class="tier-label">
+        <div class="tier-label-line"></div>
+        <div class="tier-label-text" style="color:${tier.color}">${tier.label}</div>
+        <div class="tier-label-line"></div>
+      </div>
+      <div class="founders-grid">
+        ${tier.members.map(m => `
+          <div class="founder-card" style="border-color:${tier.color}22">
+            ${buildAvatarHTML(m.username, null, 'lg')}
+            <div>
+              <div class="founder-name">${escHtml(m.name)}</div>
+              <div class="founder-username">@${escHtml(m.username)}</div>
+            </div>
+            ${getRoleBadgeHTML(tier.tier)}
+            <div class="founder-desc">${escHtml(m.desc)}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    container.appendChild(tierEl);
+  });
+}
+
+/* ============================================================
+   PROFILE PANEL
+   ============================================================ */
+function renderProfile() {
+  if (!currentUserData) return;
+  const { username='', bio='', photoBase64=null } = currentUserData;
+  const role = getUserRole(username);
+  const container = document.getElementById('profile-content');
+
+  container.innerHTML = `
+    <div class="profile-card">
+      <div class="profile-cover"></div>
+      <div class="profile-info">
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar" onclick="document.getElementById('profile-photo-input').click()">
+            ${photoBase64
+              ? `<img src="${photoBase64}" alt="${username}">`
+              : `<div class="av-init" style="background:${getAvatarColor(username)}">${getInitials(username)}</div>`
+            }
+            <div class="profile-avatar-overlay"><i class="fas fa-camera"></i></div>
+          </div>
         </div>
-        <span class="post-badge ${cls}" style="font-size:.65rem;padding:3px 9px">${bLbl}</span>
-        ${doc.id!==CU.uid&&d.role!=="founder_owner"?`
-        <button class="btn-danger-sm" onclick="toggleBan('${doc.id}',${!!d.banned})">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-          ${d.banned?"Unban":"Ban"}
-        </button>`:""}`;
-      el.appendChild(row);
-    });
-  } catch(e) { el.innerHTML='<p style="padding:20px;color:var(--muted);">Gagal memuat user.</p>'; console.error(e); }
+        <div class="profile-name">${escHtml(username)}</div>
+        <div class="profile-badge-wrap">${getRoleBadgeHTML(role)}</div>
+        <div class="profile-bio" id="profile-bio-display">${bio ? escHtml(bio) : '<span style="color:var(--text-600)">Belum ada bio...</span>'}</div>
+      </div>
+
+      <div class="profile-edit-section">
+        <div class="profile-edit-label"><i class="fas fa-edit"></i> Edit Bio</div>
+        <textarea class="profile-bio-input" id="profile-bio-input" rows="3" maxlength="200" placeholder="Ceritakan tentang dirimu... (maks 200 karakter)">${bio}</textarea>
+        <button class="btn-save" onclick="saveProfile()"><i class="fas fa-save"></i> Simpan</button>
+      </div>
+
+      <div class="profile-posts-header">
+        <i class="fas fa-th"></i> Postinganku
+      </div>
+      <div id="profile-posts-container" class="profile-posts">
+        <div class="feed-status"><i class="fas fa-spinner spin"></i><p>Memuat...</p></div>
+      </div>
+    </div>
+  `;
+
+  loadProfilePosts();
 }
 
-async function toggleBan(uid, isBanned) {
-  if (!confirm(isBanned?"Unban user ini?":"Ban user ini dari komunitas?")) return;
+async function loadProfilePosts() {
+  const container = document.getElementById('profile-posts-container');
+  if (!container) return;
   try {
-    await db.collection("users").doc(uid).update({ banned: !isBanned });
-    toast(isBanned ? "✅ User di-unban." : "⛔ User di-ban.");
-    loadAdminUsers();
-  } catch(e) { toast("❌ Gagal."); }
+    const snap = await db.collection('posts')
+      .where('authorId', '==', currentUser.uid)
+      .orderBy('timestamp', 'desc')
+      .limit(10)
+      .get();
+    if (snap.empty) {
+      container.innerHTML = `<div class="feed-status"><i class="fas fa-comment-slash"></i><p>Belum ada postingan.</p></div>`;
+      return;
+    }
+    container.innerHTML = '';
+    snap.docs.forEach(doc => container.appendChild(createPostElement(doc.id, doc.data())));
+  } catch(e) {
+    container.innerHTML = `<div class="feed-status"><p>Gagal memuat.</p></div>`;
+    console.error(e);
+  }
 }
 
-// ─── ADMIN: ALL POSTS ───────────────────────
-async function loadAdminPosts() {
-  if (!isAdmin(CUD?.role)) return;
-  const el = document.getElementById("adminPostList");
-  el.innerHTML = '<div class="loader-wrap"><div class="ngc-spinner"></div></div>';
+function handleProfilePhotoChange(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { showToast('Foto maksimal 5MB!', 'error'); return; }
+  showToast('Mengupload foto...', 'info');
+  compressImage(file, 300, 0.85).then(async base64 => {
+    try {
+      await db.collection('users').doc(currentUser.uid).update({ photoBase64: base64 });
+      currentUserData.photoBase64 = base64;
+      updateSidebarUser();
+      renderProfile();
+      showToast('Foto profil berhasil diupdate! 📸', 'success');
+    } catch(e) {
+      showToast('Gagal menyimpan foto.', 'error');
+      console.error(e);
+    }
+  }).catch(() => showToast('Gagal memproses gambar.', 'error'));
+}
+
+async function saveProfile() {
+  const bio = document.getElementById('profile-bio-input')?.value.trim() || '';
   try {
-    const snap = await db.collection("posts").orderBy("createdAt","desc").limit(50).get();
-    if (snap.empty) { el.innerHTML='<p style="text-align:center;color:var(--muted);padding:44px 0;">Belum ada postingan.</p>'; return; }
-    el.innerHTML = "";
-    for (const doc of snap.docs) el.appendChild(await buildPost(doc.id, doc.data()));
-  } catch(e) { el.innerHTML='<p style="padding:20px;color:var(--muted);">Gagal memuat postingan.</p>'; console.error(e); }
+    await db.collection('users').doc(currentUser.uid).update({ bio });
+    currentUserData.bio = bio;
+    renderProfile();
+    showToast('Profil berhasil disimpan! ✅', 'success');
+  } catch(e) {
+    showToast('Gagal menyimpan profil.', 'error');
+    console.error(e);
+  }
 }
 
-// ─── ADMIN TAB SWITCH ───────────────────────
-function switchTab(tab, btn) {
-  document.querySelectorAll(".atab").forEach(b => b.classList.remove("active"));
-  btn.classList.add("active");
-  document.getElementById("adminTabChat").classList.toggle("hidden",  tab!=="chat");
-  document.getElementById("adminTabUsers").classList.toggle("hidden", tab!=="users");
-  document.getElementById("adminTabPosts").classList.toggle("hidden", tab!=="posts");
-  if (tab==="chat")  loadAdminChat();
-  if (tab==="users") loadAdminUsers();
-  if (tab==="posts") loadAdminPosts();
+/* ============================================================
+   PANEL NAVIGATION
+   ============================================================ */
+function showPanel(panel) {
+  // Hide all panels
+  document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
+  document.getElementById('panel-' + panel)?.classList.remove('hidden');
+
+  // Update sidebar active
+  document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll(`.sb-item[data-panel="${panel}"]`).forEach(el => el.classList.add('active'));
+
+  // Update mobile nav active
+  document.querySelectorAll('.mob-nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll(`.mob-nav-item[data-panel="${panel}"]`).forEach(el => el.classList.add('active'));
+
+  // Render panel content
+  if (panel === 'links')    renderLinks();
+  if (panel === 'founders') renderFounders();
+  if (panel === 'profile')  renderProfile();
+  if (panel === 'home')     { /* Feed already listening */ }
+
+  // Scroll to top
+  document.getElementById('main-content')?.scrollTo(0, 0);
+  window.scrollTo(0, 0);
 }
 
-// ─── HELPERS ────────────────────────────────
-function genAva(name) {
-  const letter = (name||"N")[0].toUpperCase();
-  const c = document.createElement("canvas"); c.width=80; c.height=80;
-  const ctx = c.getContext("2d");
-  const g = ctx.createLinearGradient(0,0,80,80);
-  g.addColorStop(0,"#2B8EFF"); g.addColorStop(1,"#0A5CE8");
-  ctx.fillStyle=g; ctx.fillRect(0,0,80,80);
-  ctx.fillStyle="#fff"; ctx.font="bold 36px Rajdhani,sans-serif";
-  ctx.textAlign="center"; ctx.textBaseline="middle";
-  ctx.fillText(letter,40,44);
-  return c.toDataURL();
+/* ============================================================
+   CLEANUP
+   ============================================================ */
+function cleanupListeners() {
+  if (feedUnsub) { feedUnsub(); feedUnsub = null; }
+  Object.values(commentUnsubs).forEach(u => u && u());
+  commentUnsubs = {};
 }
 
-function esc(str) {
-  if (str===null||str===undefined) return "";
-  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+/* ============================================================
+   UTILITY - HTML escape
+   ============================================================ */
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
-function fmt(date) {
-  if (!date) return "Baru saja";
-  const s = Math.floor((new Date()-date)/1000);
-  if (s<60) return "Baru saja";
-  if (s<3600) return Math.floor(s/60)+" menit lalu";
-  if (s<86400) return Math.floor(s/3600)+" jam lalu";
-  if (s<604800) return Math.floor(s/86400)+" hari lalu";
-  return date.toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"});
-}
+/* ============================================================
+   APP INIT — Auth State Observer
+   ============================================================ */
+auth.onAuthStateChanged(async user => {
+  const loadingEl = document.getElementById('loading-screen');
+  const authEl    = document.getElementById('auth-screen');
+  const appEl     = document.getElementById('main-app');
 
-function v(id)  { return document.getElementById(id)?.value?.trim()||""; }
-function setText(id, val) { const e=document.getElementById(id); if(e) e.textContent=val; }
-function setAva(id, src, name) {
-  const e = document.getElementById(id);
-  if (!e) return;
-  e.src = src;
-  e.onerror = () => { e.src = genAva(name); e.onerror = null; };
-}
+  if (user) {
+    currentUser = user;
+    try {
+      await loadCurrentUserData(user.uid);
+    } catch(e) {
+      currentUserData = { uid: user.uid, username: user.displayName || 'User', bio:'', photoBase64:null };
+    }
 
-function toast(msg) {
-  const t = document.getElementById("toast");
-  if (!t) return;
-  t.textContent = msg;
-  t.classList.remove("hidden");
-  clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.add("hidden"), 3400);
-}
+    // Show app
+    loadingEl.classList.add('hidden');
+    authEl.classList.add('hidden');
+    appEl.classList.remove('hidden');
 
-// ─── MODAL CLOSE ON BACKDROP ────────────────
-document.getElementById("editModal").addEventListener("click", e => { if(e.target===document.getElementById("editModal")) closeEditProfile(); });
-document.getElementById("commentModal").addEventListener("click", e => { if(e.target===document.getElementById("commentModal")) closeComments(); });
+    updateSidebarUser();
+    showPanel('home');
+    loadFeed();
+
+  } else {
+    currentUser     = null;
+    currentUserData = null;
+    cleanupListeners();
+
+    loadingEl.classList.add('hidden');
+    appEl.classList.add('hidden');
+    authEl.classList.remove('hidden');
+  }
+});
+
+// Keyboard: close modal on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeImgModal();
+});
+</script>
+</body>
+</html>
