@@ -763,4 +763,90 @@ code { font-family: monospace; background: rgba(43,142,255,0.15); color: var(--n
 @media (max-width:400px) {
   .auth-card { padding: 28px 18px; }
   .auth-logo-img { width: 52px; height: 52px; }
-                                }
+}
+
+/* =============================================
+   ORG CHART TEAM PANEL
+   ============================================= */
+.org-connector {
+  width: 2px; height: 24px;
+  background: linear-gradient(to bottom, var(--ngc-border2), var(--ngc-blue));
+  margin: 0 auto;
+  border-radius: 1px;
+}
+.org-section {
+  background: rgba(10,22,44,0.85);
+  border: 1px solid var(--org-border, rgba(43,142,255,0.3));
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+}
+.org-section-hdr {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px;
+  background: rgba(0,0,0,0.25);
+  border-bottom: 1px solid var(--org-border, rgba(43,142,255,0.2));
+  font-family: 'Rajdhani', sans-serif; font-weight: 700;
+  font-size: 0.75rem; letter-spacing: 0.18em;
+  color: var(--org-color, var(--ngc-cyan));
+}
+.org-section-icon { font-size: 1rem; }
+.org-section-label { text-transform: uppercase; }
+
+.org-members-list { display: flex; flex-direction: column; }
+.org-member-row {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(26,53,96,0.4);
+  transition: background var(--trans);
+}
+.org-member-row:last-child { border-bottom: none; }
+.org-member-row:hover { background: rgba(43,142,255,0.05); }
+.org-member-ava {
+  width: 34px; height: 34px; border-radius: 50%;
+  object-fit: cover; background: var(--ngc-card); flex-shrink: 0;
+}
+.org-member-name {
+  flex: 1; font-family: 'Rajdhani', sans-serif;
+  font-weight: 600; font-size: 0.9rem; letter-spacing: 0.03em;
+}
+.org-member-tag {
+  font-family: 'Rajdhani', sans-serif; font-weight: 700;
+  font-size: 0.65rem; letter-spacing: 0.08em;
+  padding: 3px 9px; border-radius: 4px;
+  border: 1px solid; white-space: nowrap;
+}
+
+/* =============================================
+   ROLE BADGE — di postingan & komentar
+   ============================================= */
+.post-author-name-row {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+}
+.post-role-badge {
+  display: inline-flex; align-items: center;
+  font-family: 'Rajdhani', sans-serif; font-weight: 700;
+  font-size: 0.63rem; letter-spacing: 0.1em;
+  padding: 2px 8px; border-radius: 4px;
+  border: 1px solid; white-space: nowrap; line-height: 1.4;
+  text-transform: uppercase;
+}
+.comment-author-row {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+.comment-role-badge {
+  display: inline-flex; align-items: center;
+  font-family: 'Rajdhani', sans-serif; font-weight: 700;
+  font-size: 0.6rem; letter-spacing: 0.1em;
+  padding: 1px 7px; border-radius: 4px;
+  border: 1px solid; white-space: nowrap; line-height: 1.4;
+  text-transform: uppercase;
+}
+
+/* Role badge colors */
+.role-owner     { background: rgba(255,215,0,0.12); color: #FFD700; border-color: rgba(255,215,0,0.35); }
+.role-cofounder { background: rgba(0,207,255,0.12); color: var(--ngc-cyan); border-color: rgba(0,207,255,0.35); }
+.role-ketua     { background: rgba(123,159,255,0.12); color: #7B9FFF; border-color: rgba(123,159,255,0.35); }
+.role-admin     { background: rgba(72,196,255,0.1); color: #48C4FF; border-color: rgba(72,196,255,0.3); }
+.role-member    { display: none; }  /* member tidak dapat badge */
