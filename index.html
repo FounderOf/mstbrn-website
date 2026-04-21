@@ -894,6 +894,31 @@
       transition: var(--tr);
     }
     .profile-bio-input:focus { border-color: var(--blue); }
+    .profile-username-input {
+      width:100%;
+      background: var(--bg-600);
+      border:1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text-100);
+      padding:10px 12px;
+      font-size:13px; font-family: var(--font-b);
+      outline:none;
+      transition: var(--tr);
+    }
+    .profile-username-input:focus { border-color: var(--blue); }
+    .profile-username-input:disabled {
+      opacity:0.6; cursor:not-allowed;
+      border-color: var(--border);
+    }
+    .username-note {
+      font-size:11px; color: var(--text-600);
+      margin-top:2px;
+    }
+    .username-note.locked { color: var(--gold); }
+    .btn-save-row {
+      display:flex; align-items:center; gap:10px;
+      justify-content:flex-end;
+    }
     .btn-save {
       align-self:flex-end;
       padding:9px 20px;
@@ -1456,8 +1481,17 @@ async function handleRegister() {
   if (username.length < 3)              { errEl.textContent='Username minimal 3 karakter!'; errEl.classList.remove('hidden'); return; }
   if (password.length < 6)             { errEl.textContent='Password minimal 6 karakter!'; errEl.classList.remove('hidden'); return; }
   try {
+    // Cek apakah username sudah dipakai
+    const usernameCheck = await db.collection('usernames').doc(username.toLowerCase()).get();
+    if (usernameCheck.exists) {
+      errEl.textContent = 'Username sudah dipakai, coba yang lain!';
+      errEl.classList.remove('hidden');
+      return;
+    }
     const cred = await auth.createUserWithEmailAndPassword(email, password);
     await cred.user.updateProfile({ displayName: username });
+    // Simpan username claim (lowercase key untuk case-insensitive check)
+    await db.collection('usernames').doc(username.toLowerCase()).set({ uid: cred.user.uid, username });
     await db.collection('users').doc(cred.user.uid).set({
       uid:          cred.user.uid,
       username:     username,
@@ -1503,6 +1537,19 @@ async function loadCurrentUserData(uid) {
       const fallback = currentUser.displayName || currentUser.email.split('@')[0];
       currentUserData.username = fallback;
       await db.collection('users').doc(uid).update({ username: fallback }).catch(()=>{});
+      // Daftarkan username claim jika belum ada
+      const uRef = db.collection('usernames').doc(fallback.toLowerCase());
+      const uSnap = await uRef.get().catch(()=>null);
+      if (!uSnap || !uSnap.exists) {
+        await uRef.set({ uid, username: fallback }).catch(()=>{});
+      }
+    } else {
+      // Pastikan username claim sudah terdaftar untuk user ini
+      const uRef = db.collection('usernames').doc(currentUserData.username.toLowerCase());
+      const uSnap = await uRef.get().catch(()=>null);
+      if (!uSnap || !uSnap.exists) {
+        await uRef.set({ uid, username: currentUserData.username }).catch(()=>{});
+      }
     }
   } else {
     // Buat dokumen user baru kalau belum ada
@@ -1512,6 +1559,12 @@ async function loadCurrentUserData(uid) {
       uid, username: fallbackName, bio:'', photoBase64: null,
       email: currentUser.email, createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).catch(()=>{});
+    // Daftarkan username claim
+    const uRef = db.collection('usernames').doc(fallbackName.toLowerCase());
+    const uSnap = await uRef.get().catch(()=>null);
+    if (!uSnap || !uSnap.exists) {
+      await uRef.set({ uid, username: fallbackName }).catch(()=>{});
+    }
   }
 }
 
@@ -1887,6 +1940,35 @@ function renderFounders() {
     const tierEl = document.createElement('div');
     tierEl.className = 'founders-tier';
     tierEl.style.marginBottom = '16px';
+
+    // Auto-sync: ambil usernames dari ROLE_USERS config sesuai tier
+    const roleUsernames = ROLE_USERS[tier.tier] || [];
+
+    // Merge members: untuk setiap username di ROLE_USERS, cari data di FOUNDERS_DATA.members
+    let displayMembers = tier.members;
+    if (roleUsernames.length > 0) {
+      displayMembers = roleUsernames.map(uname => {
+        const found = tier.members.find(m =>
+          m.username && m.username.toLowerCase() === uname.toLowerCase()
+        );
+        if (found) return found;
+        // Jika user yang sedang login punya username ini, gunakan data mereka
+        if (currentUserData && currentUserData.username === uname) {
+          return {
+            name: uname,
+            username: uname,
+            desc: tier.members[0]?.desc || tier.label
+          };
+        }
+        // Fallback: tampilkan username dari ROLE_USERS
+        return {
+          name: uname,
+          username: uname,
+          desc: tier.members[0]?.desc || tier.label
+        };
+      });
+    }
+
     tierEl.innerHTML = `
       <div class="tier-label">
         <div class="tier-label-line"></div>
@@ -1894,7 +1976,7 @@ function renderFounders() {
         <div class="tier-label-line"></div>
       </div>
       <div class="founders-grid">
-        ${tier.members.map(m => `
+        ${displayMembers.map(m => `
           <div class="founder-card" style="border-color:${tier.color}22">
             ${buildAvatarHTML(m.username, null, 'lg')}
             <div>
@@ -1920,6 +2002,15 @@ function renderProfile() {
   const role = getUserRole(username);
   const container = document.getElementById('profile-content');
 
+  // Cek apakah username ini terkunci (ada di ROLE_USERS)
+  const allRoleUsernames = [
+    ...ROLE_USERS.owner,
+    ...ROLE_USERS.raja_iblis,
+    ...ROLE_USERS.ketua,
+    ...ROLE_USERS.administrasi
+  ];
+  const isRoleLocked = allRoleUsernames.includes(username);
+
   container.innerHTML = `
     <div class="profile-card">
       <div class="profile-cover"></div>
@@ -1933,15 +2024,33 @@ function renderProfile() {
             <div class="profile-avatar-overlay"><i class="fas fa-camera"></i></div>
           </div>
         </div>
-        <div class="profile-name">${escHtml(username)}</div>
+        <div class="profile-name" id="profile-name-display">@${escHtml(username)}</div>
         <div class="profile-badge-wrap">${getRoleBadgeHTML(role)}</div>
         <div class="profile-bio" id="profile-bio-display">${bio ? escHtml(bio) : '<span style="color:var(--text-600)">Belum ada bio...</span>'}</div>
       </div>
 
       <div class="profile-edit-section">
-        <div class="profile-edit-label"><i class="fas fa-edit"></i> Edit Bio</div>
+        <div class="profile-edit-label"><i class="fas fa-at"></i> Edit Username</div>
+        <input
+          class="profile-username-input"
+          id="profile-username-input"
+          type="text"
+          maxlength="30"
+          placeholder="Username baru..."
+          value="${escHtml(username)}"
+          ${isRoleLocked ? 'disabled' : ''}
+        >
+        ${isRoleLocked
+          ? `<div class="username-note locked"><i class="fas fa-lock"></i> Username terkunci karena memiliki role khusus</div>`
+          : `<div class="username-note"><i class="fas fa-info-circle"></i> Tanpa spasi, minimal 3 karakter</div>`
+        }
+
+        <div class="profile-edit-label" style="margin-top:8px"><i class="fas fa-edit"></i> Edit Bio</div>
         <textarea class="profile-bio-input" id="profile-bio-input" rows="3" maxlength="200" placeholder="Ceritakan tentang dirimu... (maks 200 karakter)">${bio}</textarea>
-        <button class="btn-save" onclick="saveProfile()"><i class="fas fa-save"></i> Simpan</button>
+
+        <div class="btn-save-row">
+          <button class="btn-save" onclick="saveProfile()"><i class="fas fa-save"></i> Simpan</button>
+        </div>
       </div>
 
       <div style="padding:0 20px 16px">
@@ -2020,10 +2129,54 @@ function handleProfilePhotoChange(input) {
 }
 
 async function saveProfile() {
-  const bio = document.getElementById('profile-bio-input')?.value.trim() || '';
+  const bio         = document.getElementById('profile-bio-input')?.value.trim() || '';
+  const newUsername = document.getElementById('profile-username-input')?.value.trim() || '';
+  const oldUsername = currentUserData.username || '';
+
+  if (!newUsername) { showToast('Username tidak boleh kosong!', 'error'); return; }
+  if (newUsername.includes(' ')) { showToast('Username tidak boleh ada spasi!', 'error'); return; }
+  if (newUsername.length < 3)   { showToast('Username minimal 3 karakter!', 'error'); return; }
+  if (newUsername.length > 30)  { showToast('Username maksimal 30 karakter!', 'error'); return; }
+
+  // Cek role-lock
+  const allRoleUsernames = [
+    ...ROLE_USERS.owner,
+    ...ROLE_USERS.raja_iblis,
+    ...ROLE_USERS.ketua,
+    ...ROLE_USERS.administrasi
+  ];
+  if (allRoleUsernames.includes(oldUsername) && newUsername !== oldUsername) {
+    showToast('Username terkunci karena role khusus!', 'error');
+    return;
+  }
+
   try {
-    await db.collection('users').doc(currentUser.uid).update({ bio });
+    const updates = { bio };
+    const usernameChanged = newUsername !== oldUsername;
+
+    if (usernameChanged) {
+      // Cek apakah username baru sudah dipakai
+      const uSnap = await db.collection('usernames').doc(newUsername.toLowerCase()).get();
+      if (uSnap.exists && uSnap.data().uid !== currentUser.uid) {
+        showToast('Username sudah dipakai, coba yang lain!', 'error');
+        return;
+      }
+      updates.username = newUsername;
+    }
+
+    await db.collection('users').doc(currentUser.uid).update(updates);
+
+    if (usernameChanged) {
+      // Hapus claim lama, tambah claim baru
+      await db.collection('usernames').doc(oldUsername.toLowerCase()).delete().catch(()=>{});
+      await db.collection('usernames').doc(newUsername.toLowerCase()).set({ uid: currentUser.uid, username: newUsername });
+      // Update Firebase Auth displayName
+      await currentUser.updateProfile({ displayName: newUsername }).catch(()=>{});
+      currentUserData.username = newUsername;
+    }
+
     currentUserData.bio = bio;
+    updateSidebarUser();
     renderProfile();
     showToast('Profil berhasil disimpan! ✅', 'success');
   } catch(e) {
