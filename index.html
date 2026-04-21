@@ -88,41 +88,6 @@
     ::-webkit-scrollbar-thumb { background: var(--blue); border-radius:99px; }
     .hidden { display:none !important; }
 
-    /* === Loading Screen === */
-    #loading-screen {
-      position:fixed; inset:0;
-      background: var(--bg-900);
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
-      z-index:9999;
-      gap:24px;
-    }
-    .loader-logo {
-      font-family: var(--font-d);
-      font-size:3rem; font-weight:900;
-      background: var(--grad);
-      -webkit-background-clip:text;
-      -webkit-text-fill-color:transparent;
-      background-clip:text;
-      animation: pulse-glow 1.5s ease-in-out infinite;
-    }
-    .loader-bar {
-      width:160px; height:3px;
-      background: var(--bg-700);
-      border-radius:99px;
-      overflow:hidden;
-    }
-    .loader-fill {
-      height:100%;
-      background: var(--grad);
-      border-radius:99px;
-      animation: load-fill 1.8s ease-in-out infinite;
-    }
-    @keyframes load-fill {
-      0%   { width:0%; transform:translateX(0); }
-      50%  { width:80%; }
-      100% { width:100%; transform:translateX(5px); opacity:0; }
-    }
     @keyframes pulse-glow {
       0%,100% { filter: drop-shadow(0 0 8px rgba(26,111,255,0.5)); }
       50%      { filter: drop-shadow(0 0 20px rgba(0,212,255,0.8)); }
@@ -1053,14 +1018,8 @@
 </head>
 <body>
 
-<!-- =========== LOADING SCREEN =========== -->
-<div id="loading-screen">
-  <div class="loader-logo">NGC</div>
-  <div class="loader-bar"><div class="loader-fill"></div></div>
-</div>
-
 <!-- =========== AUTH SCREEN =========== -->
-<div id="auth-screen" class="hidden">
+<div id="auth-screen">
   <div class="auth-bg"></div>
   <div class="auth-card">
     <div class="auth-logo">
@@ -1272,20 +1231,20 @@
    ============================================================ */
 
 const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyAuZLwwomxlNUjcPp4JYILdSz4EAWtoRxY",
-  authDomain:        "dooniniks-paradise.firebaseapp.com",
-  projectId:         "dooniniks-paradise",
-  messagingSenderId: "140802324914",
-  appId:             "1:140802324914:web:f2e4f4f4656b75b240ccab"
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId:             "YOUR_APP_ID"
 };
 
 // --- ROLE USERS ---
 // Isi dengan username (displayName) yang sudah daftarkan
 const ROLE_USERS = {
-  owner:         ['LeonYonn1'],
-  raja_iblis:    ['Niks'],
-  ketua:         ['Sekay'],
-  administrasi:  ['Ice', 'Silver', 'Mpittt', 'ZoesaC24']
+  owner:         ['OwnerUsername'],
+  raja_iblis:    ['RajaIblisUsername'],
+  ketua:         ['KetuaUsername'],
+  administrasi:  ['Admin1', 'Admin2']
 };
 
 // --- FOUNDERS DATA ---
@@ -1296,7 +1255,7 @@ const FOUNDERS_DATA = [
     label:   '👑 Owner / Founder',
     color:   '#ffd700',
     members: [
-      { name: 'LeonYonn1', username: 'LeonYonn1', desc: 'Founder & Owner NGC' }
+      { name: 'Owner Name', username: 'OwnerUsername', desc: 'Founder & Owner NGC' }
     ]
   },
   {
@@ -1304,7 +1263,7 @@ const FOUNDERS_DATA = [
     label:   '👿 Raja Iblis',
     color:   '#ff4757',
     members: [
-      { name: 'Niks', username: 'Niks', desc: 'Raja Iblis NGC' }
+      { name: 'Name', username: 'Username', desc: 'Raja Iblis NGC' }
     ]
   },
   {
@@ -1312,7 +1271,7 @@ const FOUNDERS_DATA = [
     label:   '⚔️ Mentri Pertahanan / Ketua',
     color:   '#a29bfe',
     members: [
-      { name: 'Name', username: 'Sekay', desc: 'Mentri Pertahanan / Ketua' }
+      { name: 'Name', username: 'Username', desc: 'Mentri Pertahanan / Ketua' }
     ]
   },
   {
@@ -1320,18 +1279,16 @@ const FOUNDERS_DATA = [
     label:   '🛡️ Divisi Administrasi',
     color:   '#00d4ff',
     members: [
-      { name: 'Admin 1', username: 'Ice', desc: 'Divisi Administrasi' },
-      { name: 'Admin 2', username: 'Silver', desc: 'Divisi Administrasi' }
-      { name: 'Admin 3', username: 'Mpittt', desc: 'Divisi Administrasi' },
-      { name: 'Admin 4', username: 'ZoesaC24', desc: 'Divisi Administrasi' }
+      { name: 'Admin 1', username: 'Admin1', desc: 'Divisi Administrasi' },
+      { name: 'Admin 2', username: 'Admin2', desc: 'Divisi Administrasi' }
     ]
   }
 ];
 
 // --- LINKS ---
 const LINKS_CONFIG = {
-  discord: { url: 'https://discord.gg/PUQZvp3b5v',       label: 'Join Server NGC' },
-  tiktok:  { url: 'https://www.tiktok.com/@mstbrncommunity?_r=1&_t=ZS-95e8ocTVQP7',   label: '@nextgencollective' },
+  discord: { url: 'https://discord.gg/YOURLINK',       label: 'Join Server NGC' },
+  tiktok:  { url: 'https://tiktok.com/@YOURACCOUNT',   label: '@nextgencollective' },
   roblox:  [
     { name: 'Map 1',  url: 'https://www.roblox.com/games/YOUR_ID_1', desc: 'Deskripsi map 1' },
     { name: 'Map 2',  url: 'https://www.roblox.com/games/YOUR_ID_2', desc: 'Deskripsi map 2' },
@@ -2092,38 +2049,40 @@ function escHtml(str) {
 /* ============================================================
    APP INIT — Auth State Observer
    ============================================================ */
-auth.onAuthStateChanged(async user => {
-  const loadingEl = document.getElementById('loading-screen');
-  const authEl    = document.getElementById('auth-screen');
-  const appEl     = document.getElementById('main-app');
+function showAuthScreen() {
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('main-app').classList.add('hidden');
+}
 
-  if (user) {
-    currentUser = user;
-    try {
-      await loadCurrentUserData(user.uid);
-    } catch(e) {
-      currentUserData = { uid: user.uid, username: user.displayName || 'User', bio:'', photoBase64:null };
+function showAppScreen() {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('main-app').classList.remove('hidden');
+}
+
+try {
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      currentUser = user;
+      try {
+        await loadCurrentUserData(user.uid);
+      } catch(e) {
+        currentUserData = { uid: user.uid, username: user.displayName || 'User', bio:'', photoBase64: null };
+      }
+      showAppScreen();
+      updateSidebarUser();
+      showPanel('home');
+      loadFeed();
+    } else {
+      currentUser     = null;
+      currentUserData = null;
+      cleanupListeners();
+      showAuthScreen();
     }
-
-    // Show app
-    loadingEl.classList.add('hidden');
-    authEl.classList.add('hidden');
-    appEl.classList.remove('hidden');
-
-    updateSidebarUser();
-    showPanel('home');
-    loadFeed();
-
-  } else {
-    currentUser     = null;
-    currentUserData = null;
-    cleanupListeners();
-
-    loadingEl.classList.add('hidden');
-    appEl.classList.add('hidden');
-    authEl.classList.remove('hidden');
-  }
-});
+  });
+} catch(e) {
+  console.error('Firebase init error:', e);
+  showAuthScreen();
+}
 
 // Keyboard: close modal on Escape
 document.addEventListener('keydown', e => {
