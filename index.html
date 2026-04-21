@@ -1241,10 +1241,10 @@ const FIREBASE_CONFIG = {
 // --- ROLE USERS ---
 // Isi dengan username (displayName) yang sudah daftarkan
 const ROLE_USERS = {
-  owner:         ['OwnerUsername'],
-  raja_iblis:    ['RajaIblisUsername'],
-  ketua:         ['KetuaUsername'],
-  administrasi:  ['Admin1', 'Admin2']
+  owner:         ['LeonYonn1'],
+  raja_iblis:    ['NiksTry'],
+  ketua:         ['Skay'],
+  administrasi:  ['Ice', 'Silver', 'Mpittt', 'ZoesaC24']
 };
 
 // --- FOUNDERS DATA ---
@@ -1498,8 +1498,20 @@ async function loadCurrentUserData(uid) {
   const snap = await db.collection('users').doc(uid).get();
   if (snap.exists) {
     currentUserData = snap.data();
+    // Jika username kosong, isi dari displayName
+    if (!currentUserData.username) {
+      const fallback = currentUser.displayName || currentUser.email.split('@')[0];
+      currentUserData.username = fallback;
+      await db.collection('users').doc(uid).update({ username: fallback }).catch(()=>{});
+    }
   } else {
-    currentUserData = { uid, username: currentUser.displayName, bio:'', photoBase64: null };
+    // Buat dokumen user baru kalau belum ada
+    const fallbackName = currentUser.displayName || currentUser.email.split('@')[0];
+    currentUserData = { uid, username: fallbackName, bio:'', photoBase64: null, email: currentUser.email };
+    await db.collection('users').doc(uid).set({
+      uid, username: fallbackName, bio:'', photoBase64: null,
+      email: currentUser.email, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(()=>{});
   }
 }
 
@@ -1932,6 +1944,23 @@ function renderProfile() {
         <button class="btn-save" onclick="saveProfile()"><i class="fas fa-save"></i> Simpan</button>
       </div>
 
+      <div style="padding:0 20px 16px">
+        <button onclick="handleLogout()" style="
+          width:100%; padding:12px;
+          background:rgba(255,71,87,0.1);
+          border:1px solid rgba(255,71,87,0.25);
+          border-radius:var(--r-md);
+          color:#ff6b7a; font-family:var(--font-b);
+          font-weight:600; font-size:14px;
+          cursor:pointer; display:flex;
+          align-items:center; justify-content:center; gap:8px;
+          transition:var(--tr);"
+          onmouseover="this.style.background='rgba(255,71,87,0.2)'"
+          onmouseout="this.style.background='rgba(255,71,87,0.1)'">
+          <i class="fas fa-sign-out-alt"></i> Keluar dari Akun
+        </button>
+      </div>
+
       <div class="profile-posts-header">
         <i class="fas fa-th"></i> Postinganku
       </div>
@@ -1948,20 +1977,26 @@ async function loadProfilePosts() {
   const container = document.getElementById('profile-posts-container');
   if (!container) return;
   try {
+    // Tanpa orderBy agar tidak butuh composite index Firestore
     const snap = await db.collection('posts')
       .where('authorId', '==', currentUser.uid)
-      .orderBy('timestamp', 'desc')
-      .limit(10)
+      .limit(20)
       .get();
     if (snap.empty) {
       container.innerHTML = `<div class="feed-status"><i class="fas fa-comment-slash"></i><p>Belum ada postingan.</p></div>`;
       return;
     }
     container.innerHTML = '';
-    snap.docs.forEach(doc => container.appendChild(createPostElement(doc.id, doc.data())));
+    // Sort by timestamp desc di client
+    const sorted = snap.docs.sort((a, b) => {
+      const ta = a.data().timestamp?.toMillis?.() || 0;
+      const tb = b.data().timestamp?.toMillis?.() || 0;
+      return tb - ta;
+    });
+    sorted.forEach(doc => container.appendChild(createPostElement(doc.id, doc.data())));
   } catch(e) {
-    container.innerHTML = `<div class="feed-status"><p>Gagal memuat.</p></div>`;
-    console.error(e);
+    container.innerHTML = `<div class="feed-status"><i class="fas fa-exclamation-circle" style="color:var(--red)"></i><p>Gagal memuat postingan.</p></div>`;
+    console.error('Profile posts error:', e);
   }
 }
 
@@ -2090,4 +2125,4 @@ document.addEventListener('keydown', e => {
 });
 </script>
 </body>
-  </html>
+</html>
