@@ -965,6 +965,114 @@
       display:flex; align-items:center; justify-content:center;
     }
 
+    /* === User Profile Popup Modal === */
+    #user-profile-modal {
+      position:fixed; inset:0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      z-index:8000;
+      display:flex; align-items:center; justify-content:center;
+      padding:16px;
+    }
+    #user-profile-modal.hidden { display:none; }
+    .upm-card {
+      position:relative;
+      background: var(--bg-700);
+      border:1px solid var(--border-b);
+      border-radius: var(--r-xl);
+      width:100%; max-width:360px;
+      max-height:85vh;
+      overflow-y:auto;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(26,111,255,0.15);
+      animation: upm-in 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes upm-in {
+      from { opacity:0; transform:scale(0.88) translateY(20px); }
+      to   { opacity:1; transform:scale(1) translateY(0); }
+    }
+    .upm-close {
+      position:absolute; top:12px; right:12px;
+      width:32px; height:32px;
+      background: rgba(0,0,0,0.4);
+      border:1px solid var(--border);
+      border-radius:50%;
+      color: var(--text-400);
+      font-size:14px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      z-index:2; transition: var(--tr);
+    }
+    .upm-close:hover { color: var(--text-100); background: rgba(255,71,87,0.2); border-color: rgba(255,71,87,0.4); }
+    .upm-cover {
+      height:90px;
+      background: linear-gradient(135deg, rgba(26,111,255,0.4) 0%, rgba(0,212,255,0.25) 100%);
+      border-radius: var(--r-xl) var(--r-xl) 0 0;
+    }
+    .upm-body {
+      padding:0 20px 16px;
+      display:flex; flex-direction:column; align-items:center;
+      text-align:center;
+      gap:8px;
+    }
+    .upm-avatar-wrap {
+      margin-top:-40px;
+      width:72px; height:72px;
+      border-radius:50%;
+      border:3px solid var(--blue);
+      overflow:hidden;
+      box-shadow: 0 0 20px rgba(26,111,255,0.5);
+    }
+    .upm-avatar-wrap .avatar,
+    .upm-avatar-wrap .avatar-lg { width:72px!important; height:72px!important; font-size:22px!important; }
+    .upm-avatar-wrap img { width:100%; height:100%; object-fit:cover; }
+    .upm-username {
+      font-family: var(--font-d);
+      font-size:15px; font-weight:700;
+      color: var(--text-100);
+      letter-spacing:0.5px;
+    }
+    .upm-bio {
+      font-size:13px; color: var(--text-400);
+      line-height:1.5;
+    }
+    .upm-posts-label {
+      font-size:11px; font-weight:700; letter-spacing:1.5px;
+      text-transform:uppercase;
+      color: var(--text-400);
+      padding:10px 20px;
+      border-top:1px solid var(--border);
+      display:flex; align-items:center; gap:6px;
+    }
+    .upm-posts {
+      padding:8px 12px 16px;
+      display:grid; grid-template-columns:repeat(3,1fr); gap:4px;
+      min-height:80px;
+    }
+    .upm-post-thumb {
+      aspect-ratio:1;
+      border-radius: var(--r-sm);
+      overflow:hidden;
+      background: var(--bg-600);
+      cursor:pointer;
+    }
+    .upm-post-thumb img { width:100%; height:100%; object-fit:cover; }
+    .upm-post-text {
+      aspect-ratio:1;
+      border-radius: var(--r-sm);
+      background: var(--bg-600);
+      border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+      padding:6px;
+      cursor:pointer;
+    }
+    .upm-post-text span {
+      font-size:11px; color: var(--text-400);
+      overflow:hidden;
+      display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+      text-align:center; line-height:1.4;
+    }
+    .clickable-author { cursor:pointer; }
+    .clickable-author:hover { opacity:0.8; }
+
     /* === Toast === */
     #toast-container {
       position:fixed; bottom:24px; right:24px;
@@ -1239,6 +1347,24 @@
   <img id="img-modal-img" src="" alt="">
 </div>
 
+<!-- User Profile Popup Modal -->
+<div id="user-profile-modal" class="hidden" onclick="closeUserProfileModal(event)">
+  <div class="upm-card" onclick="event.stopPropagation()">
+    <button class="upm-close" onclick="closeUserProfileModal()"><i class="fas fa-times"></i></button>
+    <div class="upm-cover"></div>
+    <div class="upm-body">
+      <div id="upm-avatar-wrap" class="upm-avatar-wrap"></div>
+      <div class="upm-username" id="upm-username"></div>
+      <div class="upm-badge" id="upm-badge"></div>
+      <div class="upm-bio" id="upm-bio"></div>
+    </div>
+    <div class="upm-posts-label"><i class="fas fa-th"></i> Postingan</div>
+    <div id="upm-posts" class="upm-posts">
+      <div class="feed-status"><i class="fas fa-spinner spin"></i><p>Memuat...</p></div>
+    </div>
+  </div>
+</div>
+
 <!-- Toast Container -->
 <div id="toast-container"></div>
 
@@ -1268,7 +1394,7 @@ const FIREBASE_CONFIG = {
 const ROLE_USERS = {
   owner:         ['LeonYonn1'],
   raja_iblis:    ['NiksTry'],
-  ketua:         ['Skay'],
+  ketua:         ['iKay'],
   administrasi:  ['Ice', 'Silver', 'Mpittt', 'ZoesaC24']
 };
 
@@ -1312,12 +1438,12 @@ const FOUNDERS_DATA = [
 
 // --- LINKS ---
 const LINKS_CONFIG = {
-  discord: { url: 'https://discord.gg/Er7GKdBXgb',       label: 'Join Server NGC' },
-  tiktok:  { url: 'https://www.tiktok.com/@mstbrncommunity?_r=1&_t=ZS-95kMa6MqCBw',   label: '@nextgencollective' },
+  discord: { url: 'https://discord.gg/YOURLINK',       label: 'Join Server NGC' },
+  tiktok:  { url: 'https://tiktok.com/@YOURACCOUNT',   label: '@nextgencollective' },
   roblox:  [
-    { name: 'Fishing Island',  url: 'https://www.roblox.com/share?code=9633989746149341a8508e1d096e97d4&type=ExperienceDetails&stamp=1776847246344', desc: 'Memancing sambil bersantai' },
-    { name: 'Mount Mistborne',  url: 'https://www.roblox.com/share?code=c5e0e451c2176a4292bfa2df3c9c7880&type=ExperienceDetails&stamp=1776847533813', desc: 'Mendaki bersama teman dan taklukkan puncak nya' },
-    { name: 'Mist Obstacle V2',  url: 'https://www.roblox.com/share?code=770efa599b9b3b4f9134effb29e3e4ef&type=ExperienceDetails&stamp=1776847588928', desc: 'Taklukan rintangannya dan jadi juara' }
+    { name: 'Map 1',  url: 'https://www.roblox.com/games/YOUR_ID_1', desc: 'Deskripsi map 1' },
+    { name: 'Map 2',  url: 'https://www.roblox.com/games/YOUR_ID_2', desc: 'Deskripsi map 2' },
+    { name: 'Map 3',  url: 'https://www.roblox.com/games/YOUR_ID_3', desc: 'Deskripsi map 3' }
   ]
 };
 
@@ -1480,26 +1606,33 @@ async function handleRegister() {
   if (username.includes(' '))           { errEl.textContent='Username tidak boleh ada spasi!'; errEl.classList.remove('hidden'); return; }
   if (username.length < 3)              { errEl.textContent='Username minimal 3 karakter!'; errEl.classList.remove('hidden'); return; }
   if (password.length < 6)             { errEl.textContent='Password minimal 6 karakter!'; errEl.classList.remove('hidden'); return; }
+  // Blokir username yang sudah di-assign ke role tertentu
+  const allRoleUsernames = [
+    ...ROLE_USERS.owner,
+    ...ROLE_USERS.raja_iblis,
+    ...ROLE_USERS.ketua,
+    ...ROLE_USERS.administrasi
+  ];
+  if (allRoleUsernames.some(u => u.toLowerCase() === username.toLowerCase())) {
+    errEl.textContent = 'Username ini sudah dipesan, pilih username lain!';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
   try {
-    // Cek apakah username sudah dipakai (query users collection)
-    const dupSnap = await db.collection('users').where('username', '==', username).limit(1).get();
-    if (!dupSnap.empty) {
-      errEl.textContent = 'Username sudah dipakai, coba yang lain!';
-      errEl.classList.remove('hidden');
-      return;
-    }
     const cred = await auth.createUserWithEmailAndPassword(email, password);
     await cred.user.updateProfile({ displayName: username });
     await db.collection('users').doc(cred.user.uid).set({
-      uid:          cred.user.uid,
-      username:     username,
-      email:        email,
-      bio:          '',
-      photoBase64:  null,
-      createdAt:    FieldValue.serverTimestamp()
+      uid:         cred.user.uid,
+      username:    username,
+      email:       email,
+      bio:         '',
+      photoBase64: null,
+      createdAt:   firebase.firestore.FieldValue.serverTimestamp()
     });
   } catch(e) {
-    errEl.textContent = translateAuthError(e.code);
+    console.error('Register error:', e.code, e.message);
+    errEl.textContent = translateAuthError(e.code) + (e.code ? '' : ' (' + (e.message || 'unknown') + ')');
     errEl.classList.remove('hidden');
   }
 }
@@ -1535,6 +1668,10 @@ async function loadCurrentUserData(uid) {
       const fallback = currentUser.displayName || currentUser.email.split('@')[0];
       currentUserData.username = fallback;
       await db.collection('users').doc(uid).update({ username: fallback }).catch(()=>{});
+    }
+    // Seed foto cache dengan data sendiri
+    if (currentUserData.username) {
+      userPhotoCache[currentUserData.username] = currentUserData.photoBase64 || null;
     }
   } else {
     // Buat dokumen user baru kalau belum ada
@@ -1742,10 +1879,12 @@ function createPostElement(postId, data) {
   el.id = 'post-' + postId;
   el.innerHTML = `
     <div class="post-head">
-      ${buildAvatarHTML(authorName, authorPhoto, 'sm')}
+      <div class="clickable-author" onclick="openUserProfile('${authorName}')">
+        ${buildAvatarHTML(authorName, authorPhoto, 'sm')}
+      </div>
       <div class="post-meta">
         <div class="post-author-row">
-          <span class="post-author">${escHtml(authorName)}</span>
+          <span class="post-author clickable-author" onclick="openUserProfile('${authorName}')">${escHtml(authorName)}</span>
           ${getRoleBadgeHTML(role)}
         </div>
         <div class="post-time">${formatRelativeTime(timestamp)}</div>
@@ -1821,10 +1960,12 @@ function createCommentEl(commentId, data, postId) {
   const el = document.createElement('div');
   el.className = 'comment-item';
   el.innerHTML = `
-    ${buildAvatarHTML(authorName, authorPhoto, 'sm')}
+    <div class="clickable-author" onclick="openUserProfile('${authorName}')">
+      ${buildAvatarHTML(authorName, authorPhoto, 'sm')}
+    </div>
     <div class="comment-bubble">
       <div class="comment-author-row">
-        <span class="comment-author">${escHtml(authorName)}</span>
+        <span class="comment-author clickable-author" onclick="openUserProfile('${authorName}')">${escHtml(authorName)}</span>
         ${getRoleBadgeHTML(getUserRole(authorName))}
         <span class="comment-time">${formatRelativeTime(timestamp)}</span>
         ${isMe ? `<button style="background:none;border:none;color:var(--text-600);cursor:pointer;font-size:11px;margin-left:auto" onclick="deleteComment('${postId}','${commentId}')"><i class="fas fa-times"></i></button>` : ''}
@@ -1912,7 +2053,7 @@ function renderLinks() {
 /* ============================================================
    FOUNDERS PANEL
    ============================================================ */
-function renderFounders() {
+async function renderFounders() {
   const container = document.getElementById('founders-container');
   container.innerHTML = '';
   FOUNDERS_DATA.forEach(tier => {
@@ -1923,7 +2064,7 @@ function renderFounders() {
     // Auto-sync: ambil usernames dari ROLE_USERS config sesuai tier
     const roleUsernames = ROLE_USERS[tier.tier] || [];
 
-    // Merge members: untuk setiap username di ROLE_USERS, cari data di FOUNDERS_DATA.members
+    // Merge members
     let displayMembers = tier.members;
     if (roleUsernames.length > 0) {
       displayMembers = roleUsernames.map(uname => {
@@ -1931,33 +2072,25 @@ function renderFounders() {
           m.username && m.username.toLowerCase() === uname.toLowerCase()
         );
         if (found) return found;
-        // Jika user yang sedang login punya username ini, gunakan data mereka
-        if (currentUserData && currentUserData.username === uname) {
-          return {
-            name: uname,
-            username: uname,
-            desc: tier.members[0]?.desc || tier.label
-          };
-        }
-        // Fallback: tampilkan username dari ROLE_USERS
-        return {
-          name: uname,
-          username: uname,
-          desc: tier.members[0]?.desc || tier.label
-        };
+        return { name: uname, username: uname, desc: tier.members[0]?.desc || tier.label };
       });
     }
 
+    // Render dulu dengan foto placeholder, lalu update async
+    const gridId = 'founders-grid-' + tier.tier;
     tierEl.innerHTML = `
       <div class="tier-label">
         <div class="tier-label-line"></div>
         <div class="tier-label-text" style="color:${tier.color}">${tier.label}</div>
         <div class="tier-label-line"></div>
       </div>
-      <div class="founders-grid">
+      <div class="founders-grid" id="${gridId}">
         ${displayMembers.map(m => `
-          <div class="founder-card" style="border-color:${tier.color}22">
-            ${buildAvatarHTML(m.username, null, 'lg')}
+          <div class="founder-card" id="fcard-${m.username}" style="border-color:${tier.color}22;cursor:pointer"
+               onclick="openUserProfile('${m.username}')">
+            <div id="favatar-${m.username}">
+              ${buildAvatarHTML(m.username, null, 'lg')}
+            </div>
             <div>
               <div class="founder-name">${escHtml(m.name)}</div>
               <div class="founder-username">@${escHtml(m.username)}</div>
@@ -1969,7 +2102,134 @@ function renderFounders() {
       </div>
     `;
     container.appendChild(tierEl);
+
+    // Fetch foto asli setiap member secara async
+    displayMembers.forEach(async m => {
+      const photo = await getUserPhoto(m.username);
+      if (photo) {
+        const avatarEl = document.getElementById('favatar-' + m.username);
+        if (avatarEl) avatarEl.innerHTML = buildAvatarHTML(m.username, photo, 'lg');
+      }
+    });
   });
+}
+
+/* ============================================================
+   USER PROFILE POPUP
+   ============================================================ */
+// Cache foto profil user agar tidak fetch ulang terus
+const userPhotoCache = {};
+
+async function getUserPhoto(username) {
+  if (userPhotoCache[username] !== undefined) return userPhotoCache[username];
+  try {
+    const snap = await db.collection('users').where('username', '==', username).limit(1).get();
+    if (!snap.empty) {
+      const data = snap.docs[0].data();
+      userPhotoCache[username] = data.photoBase64 || null;
+      return userPhotoCache[username];
+    }
+  } catch(e) {}
+  userPhotoCache[username] = null;
+  return null;
+}
+
+let upmPostUnsub = null;
+
+async function openUserProfile(username) {
+  // Kalau klik profil sendiri, langsung ke panel profil
+  if (currentUserData && username === currentUserData.username) {
+    showPanel('profile');
+    return;
+  }
+  const modal = document.getElementById('user-profile-modal');
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // Reset konten
+  document.getElementById('upm-username').textContent = '@' + username;
+  document.getElementById('upm-badge').innerHTML = '';
+  document.getElementById('upm-bio').textContent = '';
+  document.getElementById('upm-avatar-wrap').innerHTML = buildAvatarHTML(username, null, 'lg');
+  document.getElementById('upm-posts').innerHTML = '<div class="feed-status"><i class="fas fa-spinner spin"></i><p>Memuat...</p></div>';
+
+  try {
+    const snap = await db.collection('users').where('username', '==', username).limit(1).get();
+    if (!snap.empty) {
+      const data = snap.docs[0].data();
+      const uid = snap.docs[0].id;
+      const photo = data.photoBase64 || null;
+      const bio = data.bio || '';
+      const role = getUserRole(username);
+
+      // Cache foto
+      userPhotoCache[username] = photo;
+
+      document.getElementById('upm-avatar-wrap').innerHTML = buildAvatarHTML(username, photo, 'lg');
+      document.getElementById('upm-badge').innerHTML = getRoleBadgeHTML(role);
+      document.getElementById('upm-bio').textContent = bio || 'Belum ada bio.';
+
+      // Load postingan user
+      loadUpmPosts(uid);
+    } else {
+      const role = getUserRole(username);
+      document.getElementById('upm-badge').innerHTML = getRoleBadgeHTML(role);
+      document.getElementById('upm-bio').textContent = 'Pengguna belum melengkapi profil.';
+      document.getElementById('upm-posts').innerHTML = '<div class="feed-status"><p style="color:var(--text-600)">Belum ada postingan.</p></div>';
+    }
+  } catch(e) {
+    document.getElementById('upm-bio').textContent = 'Gagal memuat profil.';
+    document.getElementById('upm-posts').innerHTML = '';
+  }
+}
+
+function loadUpmPosts(uid) {
+  if (upmPostUnsub) { upmPostUnsub(); upmPostUnsub = null; }
+  const container = document.getElementById('upm-posts');
+  container.innerHTML = '';
+
+  upmPostUnsub = db.collection('posts')
+    .where('authorId', '==', uid)
+    .orderBy('timestamp', 'desc')
+    .limit(9)
+    .onSnapshot(snap => {
+      container.innerHTML = '';
+      if (snap.empty) {
+        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;font-size:13px;color:var(--text-600)">Belum ada postingan.</div>';
+        return;
+      }
+      snap.forEach(doc => {
+        const d = doc.data();
+        if (d.imageBase64) {
+          const thumb = document.createElement('div');
+          thumb.className = 'upm-post-thumb';
+          thumb.innerHTML = `<img src="${d.imageBase64}" alt="post">`;
+          thumb.onclick = () => { closeUserProfileModal(); setTimeout(() => openImgModalSrc(d.imageBase64), 100); };
+          container.appendChild(thumb);
+        } else if (d.content) {
+          const txt = document.createElement('div');
+          txt.className = 'upm-post-text';
+          txt.innerHTML = `<span>${escHtml(d.content)}</span>`;
+          container.appendChild(txt);
+        }
+      });
+    }, () => {
+      container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;font-size:13px;color:var(--text-600)">Gagal memuat postingan.</div>';
+    });
+}
+
+function closeUserProfileModal(e) {
+  if (e && e.target !== document.getElementById('user-profile-modal')) return;
+  document.getElementById('user-profile-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+  if (upmPostUnsub) { upmPostUnsub(); upmPostUnsub = null; }
+}
+
+function openImgModalSrc(src) {
+  const modal = document.getElementById('img-modal');
+  const img   = document.getElementById('img-modal-img');
+  img.src = src;
+  modal.classList.remove('hidden');
 }
 
 /* ============================================================
@@ -2097,6 +2357,8 @@ function handleProfilePhotoChange(input) {
     try {
       await db.collection('users').doc(currentUser.uid).update({ photoBase64: base64 });
       currentUserData.photoBase64 = base64;
+      // Update cache foto agar founder card & popup langsung pakai foto baru
+      if (currentUserData.username) userPhotoCache[currentUserData.username] = base64;
       updateSidebarUser();
       renderProfile();
       showToast('Foto profil berhasil diupdate! 📸', 'success');
@@ -2158,6 +2420,9 @@ async function saveProfile() {
     }
 
     currentUserData.bio = bio;
+    // Invalidate foto cache user sendiri agar langsung update di semua tempat
+    if (usernameChanged) delete userPhotoCache[oldUsername];
+    delete userPhotoCache[currentUserData.username];
     updateSidebarUser();
     renderProfile();
     showToast('Profil berhasil disimpan! ✅', 'success');
@@ -2260,4 +2525,4 @@ document.addEventListener('keydown', e => {
 });
 </script>
 </body>
-  </html>
+</html>
