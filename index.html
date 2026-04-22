@@ -1481,17 +1481,15 @@ async function handleRegister() {
   if (username.length < 3)              { errEl.textContent='Username minimal 3 karakter!'; errEl.classList.remove('hidden'); return; }
   if (password.length < 6)             { errEl.textContent='Password minimal 6 karakter!'; errEl.classList.remove('hidden'); return; }
   try {
-    // Cek apakah username sudah dipakai
-    const usernameCheck = await db.collection('usernames').doc(username.toLowerCase()).get();
-    if (usernameCheck.exists) {
+    // Cek apakah username sudah dipakai (query users collection)
+    const dupSnap = await db.collection('users').where('username', '==', username).limit(1).get();
+    if (!dupSnap.empty) {
       errEl.textContent = 'Username sudah dipakai, coba yang lain!';
       errEl.classList.remove('hidden');
       return;
     }
     const cred = await auth.createUserWithEmailAndPassword(email, password);
     await cred.user.updateProfile({ displayName: username });
-    // Simpan username claim (lowercase key untuk case-insensitive check)
-    await db.collection('usernames').doc(username.toLowerCase()).set({ uid: cred.user.uid, username });
     await db.collection('users').doc(cred.user.uid).set({
       uid:          cred.user.uid,
       username:     username,
@@ -1537,19 +1535,6 @@ async function loadCurrentUserData(uid) {
       const fallback = currentUser.displayName || currentUser.email.split('@')[0];
       currentUserData.username = fallback;
       await db.collection('users').doc(uid).update({ username: fallback }).catch(()=>{});
-      // Daftarkan username claim jika belum ada
-      const uRef = db.collection('usernames').doc(fallback.toLowerCase());
-      const uSnap = await uRef.get().catch(()=>null);
-      if (!uSnap || !uSnap.exists) {
-        await uRef.set({ uid, username: fallback }).catch(()=>{});
-      }
-    } else {
-      // Pastikan username claim sudah terdaftar untuk user ini
-      const uRef = db.collection('usernames').doc(currentUserData.username.toLowerCase());
-      const uSnap = await uRef.get().catch(()=>null);
-      if (!uSnap || !uSnap.exists) {
-        await uRef.set({ uid, username: currentUserData.username }).catch(()=>{});
-      }
     }
   } else {
     // Buat dokumen user baru kalau belum ada
@@ -1559,12 +1544,6 @@ async function loadCurrentUserData(uid) {
       uid, username: fallbackName, bio:'', photoBase64: null,
       email: currentUser.email, createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).catch(()=>{});
-    // Daftarkan username claim
-    const uRef = db.collection('usernames').doc(fallbackName.toLowerCase());
-    const uSnap = await uRef.get().catch(()=>null);
-    if (!uSnap || !uSnap.exists) {
-      await uRef.set({ uid, username: fallbackName }).catch(()=>{});
-    }
   }
 }
 
@@ -2129,8 +2108,10 @@ function handleProfilePhotoChange(input) {
 }
 
 async function saveProfile() {
-  const bio         = document.getElementById('profile-bio-input')?.value.trim() || '';
-  const newUsername = document.getElementById('profile-username-input')?.value.trim() || '';
+  const bioEl     = document.getElementById('profile-bio-input');
+  const usernameEl= document.getElementById('profile-username-input');
+  const bio         = bioEl ? bioEl.value.trim() : (currentUserData.bio || '');
+  const newUsername = usernameEl ? usernameEl.value.trim() : currentUserData.username;
   const oldUsername = currentUserData.username || '';
 
   if (!newUsername) { showToast('Username tidak boleh kosong!', 'error'); return; }
@@ -2138,7 +2119,7 @@ async function saveProfile() {
   if (newUsername.length < 3)   { showToast('Username minimal 3 karakter!', 'error'); return; }
   if (newUsername.length > 30)  { showToast('Username maksimal 30 karakter!', 'error'); return; }
 
-  // Cek role-lock
+  // Cek role-lock: hanya blok jika username LAMA ada di role DAN user coba ganti ke username BERBEDA
   const allRoleUsernames = [
     ...ROLE_USERS.owner,
     ...ROLE_USERS.raja_iblis,
@@ -2150,29 +2131,30 @@ async function saveProfile() {
     return;
   }
 
-  try {
-    const updates = { bio };
-    const usernameChanged = newUsername !== oldUsername;
+  const usernameChanged = newUsername !== oldUsername;
 
+  try {
     if (usernameChanged) {
-      // Cek apakah username baru sudah dipakai
-      const uSnap = await db.collection('usernames').doc(newUsername.toLowerCase()).get();
-      if (uSnap.exists && uSnap.data().uid !== currentUser.uid) {
-        showToast('Username sudah dipakai, coba yang lain!', 'error');
+      // Cek duplikat: query users collection (tidak perlu koleksi terpisah)
+      const dupSnap = await db.collection('users')
+        .where('username', '==', newUsername)
+        .limit(1)
+        .get();
+      if (!dupSnap.empty && dupSnap.docs[0].id !== currentUser.uid) {
+        showToast('Username sudah dipakai orang lain!', 'error');
         return;
       }
-      updates.username = newUsername;
-    }
-
-    await db.collection('users').doc(currentUser.uid).update(updates);
-
-    if (usernameChanged) {
-      // Hapus claim lama, tambah claim baru
-      await db.collection('usernames').doc(oldUsername.toLowerCase()).delete().catch(()=>{});
-      await db.collection('usernames').doc(newUsername.toLowerCase()).set({ uid: currentUser.uid, username: newUsername });
-      // Update Firebase Auth displayName
-      await currentUser.updateProfile({ displayName: newUsername }).catch(()=>{});
+      // Simpan username + bio sekaligus
+      await db.collection('users').doc(currentUser.uid).update({
+        username: newUsername,
+        bio: bio
+      });
+      // Update Firebase Auth displayName (non-blocking, error diabaikan)
+      currentUser.updateProfile({ displayName: newUsername }).catch(()=>{});
       currentUserData.username = newUsername;
+    } else {
+      // Hanya update bio
+      await db.collection('users').doc(currentUser.uid).update({ bio: bio });
     }
 
     currentUserData.bio = bio;
@@ -2180,8 +2162,8 @@ async function saveProfile() {
     renderProfile();
     showToast('Profil berhasil disimpan! ✅', 'success');
   } catch(e) {
-    showToast('Gagal menyimpan profil.', 'error');
-    console.error(e);
+    console.error('saveProfile error:', e);
+    showToast('Gagal menyimpan: ' + (e.message || e.code || 'Coba lagi.'), 'error');
   }
 }
 
@@ -2278,4 +2260,4 @@ document.addEventListener('keydown', e => {
 });
 </script>
 </body>
-</html>
+  </html>
